@@ -2401,11 +2401,6 @@ class App(CTk):
         note_box_tol = int(self.vars["note_box_tolerance"].get() or 8)
         note_track_ratio = float(self.vars["note_track_ratio"].get())
         charge_track_ratio = float(self.vars["charge_track_ratio"].get() or 0.23)
-        # Maelstrom-style charge control variables
-        maelstrom_state = "minigame"  # State machine: "minigame" or "moving_to_right"
-        colors_were_missing = False  # Track if colors were lost
-        maelstrom_left_section = 0.1  # Left section ratio
-        maelstrom_right_section = 0.5  # Right section ratio
         # Hold and release mouse
         def hold_mouse():
             nonlocal mouse_down
@@ -2495,6 +2490,10 @@ class App(CTk):
                 charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
                 charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
                 charge_img = self._grab_screen_region(charge_left, charge_top, charge_right, charge_bottom)
+                try:
+                    cv2.imwrite("debug_bar.png", charge_img)
+                except:
+                    pass
                 charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
                 charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
             else:
@@ -2602,13 +2601,16 @@ class App(CTk):
             elif controller_mode == 4:
                 now = time.time()
 
+                # Stable condition
+                can_start_charge = (fish_x - bar_center) < -50
+
                 # Cooldown
                 if now < charge_cooldown_until:
                     release_mouse()
-                    should_hold = False
+                    charging = False
                     continue
 
-                # Stabilize charge detection (keep existing detection logic)
+                # Stabilize charge detection
                 if charge_size2 is not None and charge_size2 > 0:
                     last_charge_size = charge_size2
                     charge_lost_frames = 0
@@ -2620,79 +2622,25 @@ class App(CTk):
                 else:
                     effective_charge = 0
 
-                # Maelstrom-style logic: colors detected if effective_charge > 0
-                colors_detected = effective_charge > 0
+                # Start charging
+                if not charging:
+                    if can_start_charge:
+                        charging = True
 
-                # Calculate bar sections
-                charge_size = bar_right_screen - bar_left_screen
-                left_threshold = bar_left_screen + (charge_size * maelstrom_left_section)
-                right_threshold = bar_left_screen + (charge_size * maelstrom_right_section)
-
-                # Determine icon position sections
-                in_left_section = fish_x < left_threshold
-                in_middle_section = left_threshold <= fish_x <= right_threshold
-                in_right_section = fish_x > right_threshold
-
-                # Edge detection (similar to IRUS)
-                edge_threshold = charge_size * bar_ratio
-                target_at_left_edge = fish_x < (fish_left + edge_threshold)
-                target_at_right_edge = fish_x > (fish_right - edge_threshold)
-
-                should_hold = False
-
-                if colors_detected:
-                    # Colors detected - clear the missing flag
-                    colors_were_missing = False
-
-                    # State machine logic similar to IRUS Neural
-                    if target_at_right_edge:
-                        # Icon at right edge of screen - spam minigame
-                        maelstrom_state = "minigame"
-                        should_hold = not colors_were_missing
-                    else:
-                        # Middle zone - state machine based on bar sections
-                        if in_left_section:
-                            # Left section: Enter "moving_to_right" state - release until we reach right section
-                            maelstrom_state = "moving_to_right"
-                            should_hold = False
-                        elif in_right_section:
-                            # Right section: Always play minigame
-                            maelstrom_state = "minigame"
-                            should_hold = not colors_were_missing
-                        else:  # in_middle_section
-                            # Middle section: Depends on state
-                            if maelstrom_state == "moving_to_right":
-                                # Coming from left - keep releasing until we reach right section
-                                should_hold = False
-                            else:
-                                # Already in minigame state - play the minigame
-                                maelstrom_state = "minigame"
-                                should_hold = not colors_were_missing
-                else:
-                    # Colors not detected - release and set flag
-                    colors_were_missing = True
-                    should_hold = False
-
-                    # Override: force release if in left section
-                    if in_left_section:
-                        maelstrom_state = "moving_to_right"
-
-                # HARD STOP: release when fully charged
-                if effective_charge >= 250:
-                    should_hold = False
-                    maelstrom_state = "cooldown"
-                    charge_cooldown_until = now + 0.2
-
-                # Execute mouse control
-                if should_hold:
+                if charging:
                     hold_mouse()
+
+                    if effective_charge >= 300:
+                        release_mouse()
+                        charging = False
+                        charge_cooldown_until = now + 0.2
                 else:
                     release_mouse()
 
                 # Overlay
                 if charge_left2 is not None and charge_right2 is not None:
                     charge_center = ((charge_left2 + charge_right2) // 2) + charge_left
-                    # print(f"Charge detected: {colors_detected}, State: {maelstrom_state}, Hold: {should_hold}")
+                    print(effective_charge)
 
                     self.after(0, lambda cc=charge_center, cs=effective_charge, fl=fish_left:
                         self.draw_overlay(bar_center=cc, box_size=cs, color="orange", canvas_offset=fl)
