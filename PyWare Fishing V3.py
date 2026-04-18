@@ -324,6 +324,7 @@ class App(CTk):
         self.vars = {} # Save entry variables here
         self.checkboxes = {}
         self.comboboxes = {} # Save combobox widgets here for dynamic updates
+        self.switches = {} # Save CTkSwitch widgets here for load/save
         # Store screen width and height to use later
         self.SCREEN_WIDTH = self.winfo_screenwidth()
         self.SCREEN_HEIGHT = self.winfo_screenheight()
@@ -461,7 +462,6 @@ class App(CTk):
         self.grid_rowconfigure(1, weight=1)  # tabs expand
 
         self.refresh_config_dropdown() # Auto refresh config
-        self._last_config = self.config_var.get()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
     # Build GUI
     # Basic tab
@@ -622,27 +622,39 @@ class App(CTk):
 
         fish_overlay_var = StringVar(value="off")
         self.vars["fish_overlay"] = fish_overlay_var
-        CTkSwitch(toggles, text="Fish Overlay", variable=fish_overlay_var, onvalue="on", offvalue="off").grid(row=1, column=0, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Fish Overlay", variable=fish_overlay_var, onvalue="on", offvalue="off")
+        sw.grid(row=1, column=0, padx=12, pady=8, sticky="w")
+        self.switches["fish_overlay"] = sw
 
         auto_zoom_var = StringVar(value="off")
         self.vars["auto_zoom"] = auto_zoom_var
-        CTkSwitch(toggles, text="Auto Zoom", variable=auto_zoom_var, onvalue="on", offvalue="off").grid(row=1, column=1, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Auto Zoom", variable=auto_zoom_var, onvalue="on", offvalue="off")
+        sw.grid(row=1, column=1, padx=12, pady=8, sticky="w")
+        self.switches["auto_zoom"] = sw
         
         auto_refresh_var = StringVar(value="off")
         self.vars["auto_refresh"] = auto_refresh_var
-        CTkSwitch(toggles, text="Auto Refresh", variable=auto_refresh_var, onvalue="on", offvalue="off").grid(row=2, column=0, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Auto Refresh", variable=auto_refresh_var, onvalue="on", offvalue="off")
+        sw.grid(row=2, column=0, padx=12, pady=8, sticky="w")
+        self.switches["auto_refresh"] = sw
 
         efficiency_mode_var = StringVar(value="off")
         self.vars["efficiency_mode"] = efficiency_mode_var
-        CTkSwitch(toggles, text="Efficiency Mode", variable=efficiency_mode_var, onvalue="on", offvalue="off").grid(row=2, column=1, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Efficiency Mode", variable=efficiency_mode_var, onvalue="on", offvalue="off")
+        sw.grid(row=2, column=1, padx=12, pady=8, sticky="w")
+        self.switches["efficiency_mode"] = sw
 
         track_notes_var = StringVar(value="off")
         self.vars["track_notes"] = track_notes_var
-        CTkSwitch(toggles, text="Track Notes", variable=track_notes_var, onvalue="on", offvalue="off").grid(row=3, column=0, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Track Notes", variable=track_notes_var, onvalue="on", offvalue="off")
+        sw.grid(row=3, column=0, padx=12, pady=8, sticky="w")
+        self.switches["track_notes"] = sw
 
         track_charges_var = StringVar(value="off")
         self.vars["track_charges"] = track_charges_var
-        CTkSwitch(toggles, text="Track Charges", variable=track_charges_var, onvalue="on", offvalue="off").grid(row=3, column=0, padx=12, pady=8, sticky="w")
+        sw = CTkSwitch(toggles, text="Track Charges", variable=track_charges_var, onvalue="on", offvalue="off")
+        sw.grid(row=3, column=1, padx=12, pady=8, sticky="w")
+        self.switches["track_charges"] = sw
 
 
         CTkLabel(toggles, text="Select Rod Delay").grid(row=4, column=0, padx=12, pady=8, sticky="w")
@@ -1007,6 +1019,13 @@ class App(CTk):
         except Exception as e:
             print(f"Error saving comboboxes: {e}")
 
+        # Save switch states
+        try:
+            for key, switch in self.switches.items():
+                data[f"switch_{key}"] = self.vars[key].get()
+        except Exception as e:
+            print(f"Error saving switches: {e}")
+
         config_folder = os.path.join(USER_CONFIG_DIR, name)
         os.makedirs(config_folder, exist_ok=True)
 
@@ -1066,6 +1085,18 @@ class App(CTk):
         except Exception as e:
             print(f"Error loading comboboxes: {e}")
 
+        # Load switch states (must call select/deselect to update visuals)
+        try:
+            for key, switch in self.switches.items():
+                switch_key = f"switch_{key}"
+                if switch_key in data:
+                    if data[switch_key] == "on":
+                        switch.select()
+                    else:
+                        switch.deselect()
+        except Exception as e:
+            print(f"Error loading switches: {e}")
+
         # Save misc settings and show status
         self.load_misc_settings()
         self.set_status(f"Config loaded: {name}")
@@ -1073,21 +1104,31 @@ class App(CTk):
     def load_last_config(self):
         """Load the last used config."""
         last_config_path = os.path.join(USER_CONFIG_DIR, "last_config.json")
+        last_config = "default"
         if os.path.exists(last_config_path):
             try:
                 with open(last_config_path, "r") as f:
                     data = json.load(f)
                     last_config = data.get("last_config", "default")
-                    self.load_settings(last_config)
             except:
-                self.load_settings("default")
-        else:
-            self.load_settings("default")
+                last_config = "default"
+        self.load_settings(last_config)
+        # Update the dropdown and internal tracker to reflect the loaded config
+        self.config_var.set(last_config)
+        self.config_dropdown.set(last_config)
+        self._last_config = last_config
     
     def save_last_config(self, name):
-        """Save the last used config name."""
+        """Save the last used config name (merge into last_config.json)."""
         last_config_path = os.path.join(USER_CONFIG_DIR, "last_config.json")
-        data = {"last_config": name}
+        data = {}
+        if os.path.exists(last_config_path):
+            try:
+                with open(last_config_path, "r") as f:
+                    data = json.load(f)
+            except:
+                data = {}
+        data["last_config"] = name
         try:
             with open(last_config_path, "w") as f:
                 json.dump(data, f, indent=4)
@@ -2480,10 +2521,10 @@ class App(CTk):
                     bar_left_screen  = estimated_left  + fish_left   # ← add this
                     bar_right_screen = estimated_right + fish_left   # ← add this
                     if bar_left_screen <= fish_x <= bar_right_screen:  # PD
-                        if self.vars["fish_overlay"].get() == "Enabled":
+                        if self.vars["fish_overlay"].get() == "on":
                             self.after(0, lambda: self.draw_overlay(bar_center=bar_center,box_size=estimated_size,color="green",canvas_offset=fish_left))
                     else:
-                        if self.vars["fish_overlay"].get() == "Enabled":
+                        if self.vars["fish_overlay"].get() == "on":
                             self.after(0, lambda: self.draw_overlay(bar_center=bar_center,box_size=estimated_size,color="yellow",canvas_offset=fish_left))
                     self.after(0, lambda: self.draw_overlay(bar_center=fish_x, box_size=10, color="red", canvas_offset=fish_left))
                     controller_mode = 0
