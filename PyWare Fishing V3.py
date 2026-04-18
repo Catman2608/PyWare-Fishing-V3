@@ -381,6 +381,7 @@ class App(CTk):
         self.overlay_window = None
         self.overlay_canvas = None
         self.init_overlay_window()
+        self.hide_overlay()
 
         # Create window
         self.geometry("800x600")
@@ -805,11 +806,10 @@ class App(CTk):
         self.vars["note_track_ratio"] = note_track_ratio_var
         CTkEntry(ratio_settings, width=120, textvariable=note_track_ratio_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Charge Tracking Ratio:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
-        note_track_ratio_var = StringVar(value="0.05")
-        self.vars["note_track_ratio"] = note_track_ratio_var
-        CTkEntry(ratio_settings, width=120, textvariable=note_track_ratio_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
-
+        CTkLabel(ratio_settings, text="Charge Tracking Ratio:").grid(row=5, column=0, padx=12, pady=10, sticky="w")
+        charge_track_ratio_var = StringVar(value="0.23")
+        self.vars["charge_track_ratio"] = charge_track_ratio_var
+        CTkEntry(ratio_settings, width=120, textvariable=charge_track_ratio_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
 
         pid_settings = CTkFrame(scroll, border_width=2 )
         pid_settings.grid(row=4, column=0, padx=20, pady=20, sticky="nw")
@@ -2081,6 +2081,11 @@ class App(CTk):
                 time.sleep(0.2)
             if not self.macro_running:
                 break
+            # Toggle fish overlay
+            if self.vars["fish_overlay"].get() == "on":
+                self.show_overlay()
+            else:
+                self.hide_overlay()
 
             # Cast
             self.set_status("Casting")
@@ -2364,11 +2369,15 @@ class App(CTk):
             fish_top    = fish["y"]
             fish_right  = fish["x"] + fish["width"]
             fish_bottom = fish["y"] + fish["height"]
+            fish_width = fish["width"]
+            fish_height = fish["height"]
         else:
             fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
             fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
             fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
             fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
+            fish_width = fish_right - fish_left
+            fish_height = fish_bottom - fish_top
         # Load values from GUI
         mouse_down = False
         fish_x = None
@@ -2383,9 +2392,11 @@ class App(CTk):
         restart_method = (self.vars["restart_method"].get())
         restart_delay = float(self.vars["restart_delay"].get())
         track_notes = self.vars["track_notes"].get()
+        track_charges = self.vars["track_charges"].get()
         note_box_hex = self.vars["note_box_color"].get()
         note_box_tol = int(self.vars["note_box_tolerance"].get() or 8)
         note_track_ratio = float(self.vars["note_track_ratio"].get())
+        charge_track_ratio = float(self.vars["charge_track_ratio"].get() or 0.23)
         # Hold and release mouse
         def hold_mouse():
             nonlocal mouse_down
@@ -2468,6 +2479,19 @@ class App(CTk):
                 deadzone = bar_size * bar_ratio
                 max_left = fish_left + deadzone
                 max_right = fish_right - deadzone
+                # Compute charge values
+                charge_half_size = bar_size * 0.4
+                charge_left = bar_center - charge_half_size
+                charge_right = bar_center + charge_half_size
+                charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
+                charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
+                charge_img = self._grab_screen_region(charge_left, charge_top, charge_right, charge_bottom)
+                try:
+                    cv2.imwrite("debug_bar.png", charge_img)
+                except:
+                    pass
+                charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
+                charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
             else:
                 bar_size = None
                 bar_center = None
@@ -2534,6 +2558,8 @@ class App(CTk):
             if controller_mode == 0:
                 if not bar_left_screen <= fish_x <= bar_right_screen:
                     controller_mode = 1
+                if track_charges == "on" and bar_left_screen <= fish_x <= bar_right_screen:
+                    controller_mode = 4
             # PID loop
             if controller_mode == 0 and bar_center is not None:
                 error = fish_x - bar_center
@@ -2555,14 +2581,31 @@ class App(CTk):
                 # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
                 control = max((0 - pid_clamp), min(pid_clamp, control))
                 # Stabilize Deadzone Checker
-                if control > 0:
+                if control > thresh:
                     hold_mouse()
-                elif control < 0:
+                elif control < -thresh:
                     release_mouse()
+                else:
+                    if deadzone_action == 1:
+                        hold_mouse()
+                    else:
+                        release_mouse()
             elif controller_mode == 2:
                 hold_mouse()
             elif controller_mode == 3:
                 release_mouse()
+            elif controller_mode == 4:
+                control = fish_x - bar_center
+                if control > -50:
+                    hold_mouse()
+                elif control < -50:
+                    release_mouse()
+                try:
+                    if charge_size2 > 300:
+                        release_mouse()
+                except:
+                    pass
+            time.sleep(0.01)
     def stop_macro(self):
         if not self.macro_running:
             return

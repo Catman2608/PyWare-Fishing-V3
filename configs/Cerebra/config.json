@@ -19,7 +19,7 @@
     "shake_tolerance": "5",
     "note_box_color": "#00990c",
     "note_box_tolerance": "2",
-    "fish_overlay": "Disabled",
+    "fish_overlay": "off",
     "auto_zoom": "off",
     "auto_refresh": "off",
     "efficiency_mode": "off",
@@ -73,5 +73,11 @@
     "combobox_restart_method": "Fish + Bar",
     "combobox_discord_webhook_mode": "Screenshot",
     "combobox_discord_webhook_cd": "Cycles",
-    "combobox_auto_totem_mode": "Time"
+    "combobox_auto_totem_mode": "Time",
+    "switch_fish_overlay": "off",
+    "switch_auto_zoom": "off",
+    "switch_auto_refresh": "off",
+    "switch_efficiency_mode": "off",
+    "switch_track_notes": "off",
+    "switch_track_charges": "off"
 }

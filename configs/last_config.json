@@ -1,18 +1,18 @@
 {
-    "last_config": "Pinion Aria",
+    "last_config": "Duskwire",
     "last_rod": "Basic Rod",
     "bar_areas": {
         "shake": {
             "x": 399,
             "y": 83,
             "width": 1097,
-            "height": 757
+            "height": 738
         },
         "fish": {
-            "x": 546,
-            "y": 861,
-            "width": 825,
-            "height": 42
+            "x": 547,
+            "y": 841,
+            "width": 824,
+            "height": 62
         },
         "friend": {
             "x": 8,
