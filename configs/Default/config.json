@@ -24,7 +24,7 @@
     "auto_refresh": "on",
     "efficiency_mode": "off",
     "track_notes": "off",
-    "track_charges": "on",
+    "track_charges": "off",
     "bag_delay": "0.2",
     "casting_mode": "Normal",
     "shake_mode": "Navigation",
@@ -43,7 +43,8 @@
     "shake_clicks": "1",
     "detection_method": "Fish",
     "restart_method": "Fish",
-    "bar_ratio": "0.6",
+    "left_ratio": "0.1",
+    "right_ratio": "0.4",
     "minigame_scan_delay": "0.01",
     "restart_delay": "1.2",
     "note_track_ratio": "0.05",
@@ -80,5 +81,5 @@
     "switch_auto_refresh": "on",
     "switch_efficiency_mode": "off",
     "switch_track_notes": "off",
-    "switch_track_charges": "on"
+    "switch_track_charges": "off"
 }

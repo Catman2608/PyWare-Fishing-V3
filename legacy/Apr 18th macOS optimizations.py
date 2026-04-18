@@ -34,7 +34,7 @@ if sys.platform == "win32":
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 elif sys.platform == "darwin":
-    import Quartz # If you're on macOS remove the first hashtag
+    # import Quartz # If you're on macOS remove the first hashtag
     def _move_mouse(x, y):
         point = Quartz.CGPointMake(float(x), float(y))
         Quartz.CGWarpMouseCursorPosition(point)
@@ -373,14 +373,6 @@ class App(CTk):
         self._thread_local = threading.local()
         self._monitor = {}      # pre-allocated monitor dict, reused every grab
         self._scale_cache = None  # cached DPI scale factor
-
-        # Triple-buffer for capture/logic thread decoupling (used in _enter_minigame)
-        self._cap_lock = threading.Lock()
-        self._cap_fish_img = None    # latest fish-area frame
-        self._cap_friend_img = None    # latest fish-area frame
-        self._cap_gift_img = None    # latest gift/shake-area frame
-        self._cap_event = threading.Event()  # signals a new frame pair is ready
-
         # Invalidate scale cache if the window moves to a different monitor
         if sys.platform == "darwin":
             self.bind("<Configure>", lambda e: self._invalidate_scale_cache())
@@ -1557,8 +1549,6 @@ class App(CTk):
         img = self._thread_local.sct.grab(m)
         # mss returns BGRA; take only first 3 channels (BGR) without a copy
         return np.frombuffer(img.raw, dtype=np.uint8).reshape(height, width, 4)[:, :, :3]
-    def grab_screen_region_loop():
-        pass
     # Pixel search
     def _find_first_pixel(self, frame, hex, tolerance=10):
         tolerance = int(np.clip(tolerance, 0, 255))
@@ -2421,13 +2411,6 @@ class App(CTk):
         colors_were_missing = False  # Track if colors were lost
         maelstrom_left_section = left_ratio  # Left section ratio
         maelstrom_right_section = right_ratio  # Right section ratio
-        # Dedicated thread for screen capture
-        cap_thread = threading.Thread(
-            target=self.grab_screen_region_loop,
-            args=(),
-            daemon=True
-        )
-        cap_thread.start()
         # Hold and release mouse
         def hold_mouse():
             nonlocal mouse_down

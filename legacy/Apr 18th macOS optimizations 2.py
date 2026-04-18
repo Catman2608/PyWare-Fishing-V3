@@ -1557,8 +1557,6 @@ class App(CTk):
         img = self._thread_local.sct.grab(m)
         # mss returns BGRA; take only first 3 channels (BGR) without a copy
         return np.frombuffer(img.raw, dtype=np.uint8).reshape(height, width, 4)[:, :, :3]
-    def grab_screen_region_loop():
-        pass
     # Pixel search
     def _find_first_pixel(self, frame, hex, tolerance=10):
         tolerance = int(np.clip(tolerance, 0, 255))
@@ -2421,13 +2419,6 @@ class App(CTk):
         colors_were_missing = False  # Track if colors were lost
         maelstrom_left_section = left_ratio  # Left section ratio
         maelstrom_right_section = right_ratio  # Right section ratio
-        # Dedicated thread for screen capture
-        cap_thread = threading.Thread(
-            target=self.grab_screen_region_loop,
-            args=(),
-            daemon=True
-        )
-        cap_thread.start()
         # Hold and release mouse
         def hold_mouse():
             nonlocal mouse_down
