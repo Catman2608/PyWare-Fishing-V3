@@ -1565,9 +1565,9 @@ class App(CTk):
     # Take debug screenshot
     def _take_debug_screenshot(self):
         """
-        Capture the configured fish area and save a debug image.
+        Capture the configured shake area and save a debug image.
         """
-        area = self.bar_areas.get("fish")
+        area = self.bar_areas.get("shake")
         fallback = False
         # Validate the stored area
         try:
@@ -1734,25 +1734,18 @@ class App(CTk):
         return stop_event
     # Pixel search
     def _find_first_pixel(self, frame, hex, tolerance=8):
+        tolerance = int(np.clip(tolerance, 0, 255))
         b, g, r = self._hex_to_bgr(hex)
+        white = np.array([b, g, r], dtype=np.int16)
+        frame_i = frame.astype(np.int16)
 
-        lower = np.array([
-            max(0, b - tolerance),
-            max(0, g - tolerance),
-            max(0, r - tolerance)
-        ], dtype=np.uint8)
+        mask = np.all(
+            np.abs(frame_i - white) <= tolerance,
+            axis=-1
+        )
 
-        upper = np.array([
-            min(255, b + tolerance),
-            min(255, g + tolerance),
-            min(255, r + tolerance)
-        ], dtype=np.uint8)
-
-        mask = cv2.inRange(frame, lower, upper)
-
-        coords = np.transpose(np.nonzero(mask))
-
-        if coords.shape[0] > 0:
+        coords = np.argwhere(mask)
+        if coords.size > 0:
             y, x = coords[0]
             return int(x), int(y)
 
@@ -1770,36 +1763,33 @@ class App(CTk):
             List of (x, y) tuples of matching pixels, or empty list if none found
         """
         if frame is None or frame.size == 0:
-            return None, None
-
-        bgr = self._hex_to_bgr(target_color_hex)
-        if bgr is None:
-            return None, None
-
-        lower = np.array([
-            max(0, bgr[0] - tolerance),
-            max(0, bgr[1] - tolerance),
-            max(0, bgr[2] - tolerance)
-        ], dtype=np.uint8)
-
-        upper = np.array([
-            min(255, bgr[0] + tolerance),
-            min(255, bgr[1] + tolerance),
-            min(255, bgr[2] + tolerance)
-        ], dtype=np.uint8)
-
-        mask = cv2.inRange(frame, lower, upper)
-
-        coords = np.column_stack(np.where(mask > 0))
-
-        if coords.size == 0:
-            return None, None
-
-        # coords = [ [y,x], [y,x], ... ]
-        y = coords[:, 0]
-        x = coords[:, 1]
-
-        return x, y
+            return []
+        
+        # Convert hex to BGR
+        bgr_color = self._hex_to_bgr(target_color_hex)
+        if bgr_color is None:
+            return []
+        
+        # Create color range with tolerance
+        lower_bound = np.array([
+            max(0, bgr_color[0] - tolerance),
+            max(0, bgr_color[1] - tolerance),
+            max(0, bgr_color[2] - tolerance)
+        ])
+        upper_bound = np.array([
+            min(255, bgr_color[0] + tolerance),
+            min(255, bgr_color[1] + tolerance),
+            min(255, bgr_color[2] + tolerance)
+        ])
+        
+        # Create mask for matching colors
+        mask = cv2.inRange(frame, lower_bound, upper_bound)
+        y_coords, x_coords = np.where(mask > 0)
+        
+        # Return as list of (x, y) tuples
+        if len(x_coords) > 0:
+            return list(zip(x_coords, y_coords))
+        return []
     def _find_color_center(self, frame, target_color_hex, tolerance=8):
         """
         Find the center point of a color cluster in a frame.
@@ -2280,19 +2270,6 @@ class App(CTk):
             shake_right = int(self.SCREEN_WIDTH * 0.8958)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
             shake_height = shake_bottom - shake_top
-        # Fish area
-        fish = self.bar_areas.get("fish")
-        if isinstance(fish, dict):
-            fish_left   = fish["x"]
-            fish_top    = fish["y"]
-            fish_right  = fish["x"] + fish["width"]
-            fish_bottom = fish["y"] + fish["height"]
-        else:
-            fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
-            fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
-            fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
-            fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
-
         shake_left_s   = int(shake_left * scale)
         shake_top_s    = int(shake_top * scale)
         shake_right_s  = int(shake_right * scale)
@@ -2331,7 +2308,6 @@ class App(CTk):
         while self.macro_running:
 
             if not self._cap_event.wait(timeout=0.5):
-                print("Crashed")
                 continue
 
             with self._cap_lock:
@@ -2346,24 +2322,20 @@ class App(CTk):
 
             if region.size == 0:
                 if time.time() - start_time > max_time:
-                    print("Crashed")
                     break
-                print("Crashed")
                 continue
 
             self.fish_overlay.clear()
 
             # --- GREEN ---
-            gx, gy = self._pixel_search(region, green_color, green_tol)
-
-            if gx is None:
-                print("Green not found")
+            green_pixels = self._pixel_search(region, green_color, green_tol)
+            if not green_pixels:
+                if time.time() - start_time > max_time:
+                    break
                 continue
 
-            # Lowest green (max Y)
-            idx = np.argmax(gy)
-            green_x = int(gx[idx])
-            green_y = int(gy[idx])
+            # Use lowest green (V2 behavior)
+            green_x, green_y = max(green_pixels, key=lambda p: p[1])
 
             # Apply offset
             green_y += user_green_offset
@@ -2371,26 +2343,22 @@ class App(CTk):
             # --- WHITE ---
             white_pixels = self._pixel_search(region, white_color, white_tol)
             if not white_pixels:
-                print("White not found")
                 continue
 
             # ===== PRIORITY 1: SAME ROW =====
-            wx, wy = self._pixel_search(region, white_color, white_tol)
+            same_row = [wp for wp in white_pixels if wp[1] == green_y]
 
-            if wx is None:
-                print("White not found")
-                continue
-
-            # Same row (removed priority 2)
-            same_mask = (wy == green_y)
-
-            if np.any(same_mask):
-                white_x = int(np.median(wx[same_mask]))
+            if same_row:
+                # Stable pick
+                white_x = int(np.median([x for x, _ in same_row]))
                 white_y = green_y
+
             else:
-                idx = np.argmin(np.abs(wy - green_y))
-                white_x = int(wx[idx])
-                white_y = int(wy[idx])
+                # ===== PRIORITY 2: CLOSEST Y =====
+                white_x, white_y = min(
+                    white_pixels,
+                    key=lambda p: abs(p[1] - green_y)
+                )
 
             # --- VELOCITY ---
             if self.vars["release_method"].get() == "Velocity-based":
@@ -2419,11 +2387,9 @@ class App(CTk):
 
             if distance < perfect_thresh:
                 time.sleep(release_delay)
-                print("Max time reached")
                 break
 
             if time.time() - start_time > max_time:
-                print("Max time reached")
                 break
 
         # --- CLEANUP ---
@@ -2790,16 +2756,21 @@ class App(CTk):
         colors_were_missing = False  # Track if colors were lost
         maelstrom_left_section = left_ratio  # Left section ratio
         maelstrom_right_section = right_ratio  # Right section ratio
+        # keyboard_controller.press(rod_slot)
+        # time.sleep(0.05)
+        # keyboard_controller.release(rod_slot)
         # Hold and release mouse
         def hold_mouse():
             nonlocal mouse_down
             if not mouse_down:
-                mouse_controller.press(Button.left)
+                # mouse_controller.press(Button.left)
+                keyboard_controller.press(Key.space)
                 mouse_down = True
         def release_mouse():
             nonlocal mouse_down
             if mouse_down:
-                mouse_controller.release(Button.left)
+                # mouse_controller.release(Button.left)
+                keyboard_controller.release(Key.space)
                 mouse_down = False
         # Start screen capture thread
         self._cap_frame = None
