@@ -1550,7 +1550,7 @@ class App(CTk):
         # mss returns BGRA; take only first 3 channels (BGR) without a copy
         return np.frombuffer(img.raw, dtype=np.uint8).reshape(height, width, 4)[:, :, :3]
     # Pixel search
-    def _find_first_pixel(self, frame, hex, tolerance=10):
+    def _find_first_pixel(self, frame, hex, tolerance=8):
         tolerance = int(np.clip(tolerance, 0, 255))
         b, g, r = self._hex_to_bgr(hex)
         white = np.array([b, g, r], dtype=np.int16)
@@ -1567,7 +1567,7 @@ class App(CTk):
             return int(x), int(y)
 
         return None
-    def _pixel_search(self, frame, target_color_hex, tolerance=10):
+    def _pixel_search(self, frame, target_color_hex, tolerance=8):
         """
         Search for a specific color in a frame and return all matching pixel coordinates.
         
@@ -1607,7 +1607,7 @@ class App(CTk):
         if len(x_coords) > 0:
             return list(zip(x_coords, y_coords))
         return []
-    def _find_color_center(self, frame, target_color_hex, tolerance=10):
+    def _find_color_center(self, frame, target_color_hex, tolerance=8):
         """
         Find the center point of a color cluster in a frame.
         Using vectorized detection.

@@ -711,7 +711,7 @@ class App(CTk):
         start_key = key
     
     # Pixel Search Functions
-    def _pixel_search(self, frame, target_color_hex, tolerance=10):
+    def _pixel_search(self, frame, target_color_hex, tolerance=8):
         """
         Search for a specific color in a frame and return all matching pixel coordinates.
         
@@ -781,7 +781,7 @@ class App(CTk):
         time.sleep(0.04)
         mouse_controller.release(Button.left)
 
-    def _find_color_center(self, frame, target_color_hex, tolerance=10):
+    def _find_color_center(self, frame, target_color_hex, tolerance=8):
         """
         Find the center point of a color cluster in a frame.
         
@@ -848,7 +848,7 @@ class App(CTk):
 
         return int(left_indices[0]), int(right_indices[-1])
 
-    def _find_color_bounds(self, frame, target_color_hex, tolerance=10):
+    def _find_color_bounds(self, frame, target_color_hex, tolerance=8):
         pixels = self._pixel_search(frame, target_color_hex, tolerance)
         if not pixels:
             return None
@@ -869,7 +869,7 @@ class App(CTk):
             "center_y": (min_y + max_y) / 2
         }
 
-    def _find_white_pixel(self, frame, tolerance=10):
+    def _find_white_pixel(self, frame, tolerance=8):
         tolerance = int(np.clip(tolerance, 0, 255))
 
         white = np.array([255, 255, 255], dtype=np.int16)

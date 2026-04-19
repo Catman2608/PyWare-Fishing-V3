@@ -2,27 +2,27 @@
     "last_rod": "Basic Rod",
     "bar_areas": {
         "shake": {
-            "x": 199,
-            "y": 99,
-            "width": 1520,
-            "height": 800
+            "x": 149,
+            "y": 83,
+            "width": 1140,
+            "height": 666
         },
         "fish": {
-            "x": 546,
-            "y": 861,
-            "width": 826,
-            "height": 65
+            "x": 374,
+            "y": 760,
+            "width": 687,
+            "height": 34
         },
         "friend": {
-            "x": 8,
-            "y": 926,
-            "width": 68,
-            "height": 89
+            "x": 6,
+            "y": 772,
+            "width": 51,
+            "height": 74
         }
     },
     "start_key": "F5",
     "change_bar_areas_key": "F6",
     "screenshot_key": "F8",
     "stop_key": "F7",
-    "last_config": "Default"
+    "last_config": "default"
 }

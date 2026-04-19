@@ -1563,7 +1563,7 @@ class App(CTk):
             )
         thread.start()
     # Pixel Search Functions
-    def _pixel_search(self, frame, target_color_hex, tolerance=10):
+    def _pixel_search(self, frame, target_color_hex, tolerance=8):
         """
         Search for a specific color in a frame and return all matching pixel coordinates.
         
@@ -1660,7 +1660,7 @@ class App(CTk):
         return np.frombuffer(img.raw, dtype=np.uint8).reshape(height, width, 4)[:, :, :3]
 
         
-    def _find_color_center(self, frame, target_color_hex, tolerance=10):
+    def _find_color_center(self, frame, target_color_hex, tolerance=8):
         """
         Find the center point of a color cluster in a frame.
         Using vectorized detection.
@@ -1787,7 +1787,7 @@ class App(CTk):
 
         return left_edge, right_edge
     
-    def _find_color_bounds(self, frame, target_color_hex, tolerance=10):
+    def _find_color_bounds(self, frame, target_color_hex, tolerance=8):
         pixels = self._pixel_search(frame, target_color_hex, tolerance)
         if not pixels:
             return None
@@ -1808,7 +1808,7 @@ class App(CTk):
             "center_y": (min_y + max_y) / 2
         }
 
-    def _find_first_pixel(self, frame, hex, tolerance=10):
+    def _find_first_pixel(self, frame, hex, tolerance=8):
         tolerance = int(np.clip(tolerance, 0, 255))
         b, g, r = self._hex_to_bgr(hex)
         white = np.array([b, g, r], dtype=np.int16)
