@@ -34,7 +34,7 @@ if sys.platform == "win32":
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 elif sys.platform == "darwin":
-    import Quartz # If you're on macOS remove the first hashtag
+    # import Quartz
     def _move_mouse(x, y):
         point = Quartz.CGPointMake(float(x), float(y))
         Quartz.CGWarpMouseCursorPosition(point)
@@ -1453,11 +1453,12 @@ class App(CTk):
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
         # Default fallback areas 
+        # 350, 150, 1500, 950
         def default_shake_area():
-            left = int(screen_w * 0.2083)
-            top = int(screen_h * 0.162)
-            right = int(screen_w * 0.7813)
-            bottom = int(screen_h * 0.7778)
+            left = int(screen_w * 0.1041)
+            top = int(screen_h * 0.0925)
+            right = int(screen_w * 0.8958)
+            bottom = int(screen_h * 0.8333)
             return {"x": left, "y": top, 
                     "width": right - left, "height": bottom - top}
         def default_fish_area():
@@ -2118,7 +2119,7 @@ class App(CTk):
         """
 
         now = time.perf_counter()
-        pd_clamp = float(self.vars["pid_clamp"].get() or 100)  # Changed default to 1.0 like comet
+        pd_clamp = float(self.vars["pid_clamp"].get() or 100)  # Changed default to 100 like comet
         # first sample: initialize state and return zero control
         if self.last_time is None:
             self.last_time = now
@@ -2187,6 +2188,95 @@ class App(CTk):
         self.last_left_x = None
         self.last_right_x = None
         self.last_known_box_center_x = None
+
+    def _charge_control_maelstrom(
+        self,
+        now,
+        fish_x,
+        fish_left,
+        fish_right,
+        bar_left_screen,
+        bar_right_screen,
+        bar_size,
+        charge_size2,
+        charge_cooldown_until,
+        charge_lost_frames,
+        last_charge_size,
+        maelstrom_state,
+        colors_were_missing,
+        maelstrom_left_section,
+        maelstrom_right_section,
+        left_ratio,
+    ):
+        """
+        Compute Maelstrom-style charge control and return the updated state.
+        """
+
+        if now < charge_cooldown_until:
+            return {
+                "should_hold": False,
+                "effective_charge": 0,
+                "charge_cooldown_until": charge_cooldown_until,
+                "charge_lost_frames": charge_lost_frames,
+                "last_charge_size": last_charge_size,
+                "maelstrom_state": maelstrom_state,
+                "colors_were_missing": colors_were_missing,
+            }
+
+        # Stabilize charge detection across a few lost frames.
+        if charge_size2 is not None and charge_size2 > 0:
+            last_charge_size = charge_size2
+            charge_lost_frames = 0
+        else:
+            charge_lost_frames += 1
+
+        effective_charge = last_charge_size if charge_lost_frames < 3 else 0
+        colors_detected = effective_charge > 0
+
+        charge_span = bar_right_screen - bar_left_screen
+        left_threshold = bar_left_screen + (charge_span * maelstrom_left_section)
+        right_threshold = bar_left_screen + (charge_span * maelstrom_right_section)
+
+        in_left_section = fish_x < left_threshold
+        in_right_section = fish_x > right_threshold
+        target_at_right_edge = fish_x > (fish_right - (charge_span * left_ratio))
+
+        should_hold = False
+
+        if colors_detected:
+            colors_were_missing = False
+
+            if target_at_right_edge:
+                maelstrom_state = "minigame"
+                should_hold = True
+            elif in_left_section:
+                maelstrom_state = "moving_to_right"
+            elif in_right_section:
+                maelstrom_state = "minigame"
+                should_hold = True
+            elif maelstrom_state != "moving_to_right":
+                maelstrom_state = "minigame"
+                should_hold = True
+        else:
+            colors_were_missing = True
+            if in_left_section:
+                maelstrom_state = "moving_to_right"
+
+        effective_charge_ratio = effective_charge / bar_size if bar_size else 0
+        if effective_charge_ratio >= 0.6:
+            should_hold = False
+            maelstrom_state = "cooldown"
+            charge_cooldown_until = now + 0.2
+
+        return {
+            "should_hold": should_hold,
+            "effective_charge": effective_charge,
+            "charge_cooldown_until": charge_cooldown_until,
+            "charge_lost_frames": charge_lost_frames,
+            "last_charge_size": last_charge_size,
+            "maelstrom_state": maelstrom_state,
+            "colors_were_missing": colors_were_missing,
+        }
     # Main macro loop
     def start_macro(self):
         self.macro_running = True # flag to control macro loop and allow safe stopping
@@ -2461,10 +2551,10 @@ class App(CTk):
             shake_bottom = shake["y"] + shake["height"]
         else:
             # fallback (old ratio logic)
-            shake_left   = int(self.SCREEN_WIDTH * 0.1333)
-            shake_top    = int(self.SCREEN_HEIGHT * 0.162)
-            shake_right  = int(self.SCREEN_WIDTH * 0.8562)
-            shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
+            shake_left = int(self.SCREEN_WIDTH * 0.1041)
+            shake_top = int(self.SCREEN_HEIGHT * 0.0925)
+            shake_right = int(self.SCREEN_WIDTH * 0.8958)
+            shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
         # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
@@ -2673,10 +2763,10 @@ class App(CTk):
             shake_y = int((shake_top + shake_bottom) / 2)
         else:
             # fallback (old ratio logic)
-            shake_left   = int(self.SCREEN_WIDTH * 0.1333)
-            shake_top    = int(self.SCREEN_HEIGHT * 0.162)
-            shake_right  = int(self.SCREEN_WIDTH * 0.8562)
-            shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
+            shake_left = int(self.SCREEN_WIDTH * 0.1041)
+            shake_top = int(self.SCREEN_HEIGHT * 0.0925)
+            shake_right = int(self.SCREEN_WIDTH * 0.8958)
+            shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
             shake_x = int(self.SCREEN_WIDTH * 0.5)
             shake_y = int(self.SCREEN_HEIGHT * 0.3)
         # --- FISH AREA ---
@@ -2961,89 +3051,32 @@ class App(CTk):
             elif controller_mode == 3:
                 release_mouse()
             elif controller_mode == 4:
-                now = time.time()
+                charge_control = self._charge_control_maelstrom(
+                    now=time.time(),
+                    fish_x=fish_x,
+                    fish_left=fish_left,
+                    fish_right=fish_right,
+                    bar_left_screen=bar_left_screen,
+                    bar_right_screen=bar_right_screen,
+                    bar_size=bar_size,
+                    charge_size2=charge_size2,
+                    charge_cooldown_until=charge_cooldown_until,
+                    charge_lost_frames=charge_lost_frames,
+                    last_charge_size=last_charge_size,
+                    maelstrom_state=maelstrom_state,
+                    colors_were_missing=colors_were_missing,
+                    maelstrom_left_section=maelstrom_left_section,
+                    maelstrom_right_section=maelstrom_right_section,
+                    left_ratio=left_ratio,
+                )
 
-                # Cooldown
-                if now < charge_cooldown_until:
-                    release_mouse()
-                    should_hold = False
-                    continue
-
-                # Stabilize charge detection (keep existing detection logic)
-                if charge_size2 is not None and charge_size2 > 0:
-                    last_charge_size = charge_size2
-                    charge_lost_frames = 0
-                else:
-                    charge_lost_frames += 1
-
-                if charge_lost_frames < 3:
-                    effective_charge = last_charge_size
-                else:
-                    effective_charge = 0
-
-                # Maelstrom-style logic: colors detected if effective_charge > 0
-                colors_detected = effective_charge > 0
-
-                # Calculate bar sections
-                charge_size = bar_right_screen - bar_left_screen
-                left_threshold = bar_left_screen + (charge_size * maelstrom_left_section)
-                right_threshold = bar_left_screen + (charge_size * maelstrom_right_section)
-
-                # Determine icon position sections
-                in_left_section = fish_x < left_threshold
-                in_middle_section = left_threshold <= fish_x <= right_threshold
-                in_right_section = fish_x > right_threshold
-
-                # Edge detection (similar to IRUS)
-                edge_threshold = charge_size * left_ratio
-                target_at_left_edge = fish_x < (fish_left + edge_threshold)
-                target_at_right_edge = fish_x > (fish_right - edge_threshold)
-
-                should_hold = False
-
-                if colors_detected:
-                    # Colors detected - clear the missing flag
-                    colors_were_missing = False
-
-                    # State machine logic similar to IRUS Neural
-                    if target_at_right_edge:
-                        # Icon at right edge of screen - spam minigame
-                        maelstrom_state = "minigame"
-                        should_hold = not colors_were_missing
-                    else:
-                        # Middle zone - state machine based on bar sections
-                        if in_left_section:
-                            # Left section: Enter "moving_to_right" state - release until we reach right section
-                            maelstrom_state = "moving_to_right"
-                            should_hold = False
-                        elif in_right_section:
-                            # Right section: Always play minigame
-                            maelstrom_state = "minigame"
-                            should_hold = not colors_were_missing
-                        else:  # in_middle_section
-                            # Middle section: Depends on state
-                            if maelstrom_state == "moving_to_right":
-                                # Coming from left - keep releasing until we reach right section
-                                should_hold = False
-                            else:
-                                # Already in minigame state - play the minigame
-                                maelstrom_state = "minigame"
-                                should_hold = not colors_were_missing
-                else:
-                    # Colors not detected - release and set flag
-                    colors_were_missing = True
-                    should_hold = False
-
-                    # Override: force release if in left section
-                    if in_left_section:
-                        maelstrom_state = "moving_to_right"
-
-                # HARD STOP: release when fully charged
-                effective_charge_ratio = effective_charge / bar_size if bar_size else 0
-                if effective_charge_ratio >= 0.6:
-                    should_hold = False
-                    maelstrom_state = "cooldown"
-                    charge_cooldown_until = now + 0.2
+                should_hold = charge_control["should_hold"]
+                effective_charge = charge_control["effective_charge"]
+                charge_cooldown_until = charge_control["charge_cooldown_until"]
+                charge_lost_frames = charge_control["charge_lost_frames"]
+                last_charge_size = charge_control["last_charge_size"]
+                maelstrom_state = charge_control["maelstrom_state"]
+                colors_were_missing = charge_control["colors_were_missing"]
 
                 # Execute mouse control
                 if should_hold:
