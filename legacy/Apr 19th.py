@@ -615,7 +615,7 @@ class App(CTk):
         self.vars["shake_tolerance"] = shake_tolerance_var
         CTkEntry(color_settings, width=120, textvariable=shake_tolerance_var).grid(row=6, column=3, padx=12, pady=10, sticky="w")
         # note box color and tolerance
-        CTkLabel(color_settings, text="Tracking Target:").grid(row=7, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(color_settings, text="note Box:").grid(row=7, column=0, padx=12, pady=10, sticky="w")
         note_box_color_var = StringVar(value="#00990c")
         self.vars["note_box_color"] = note_box_color_var
         CTkEntry(color_settings, width=120, textvariable=note_box_color_var).grid(row=7, column=1, padx=12, pady=10, sticky="w")
@@ -623,29 +623,6 @@ class App(CTk):
         note_box_tolerance_var = StringVar(value="2")
         self.vars["note_box_tolerance"] = note_box_tolerance_var
         CTkEntry(color_settings, width=120, textvariable=note_box_tolerance_var).grid(row=7, column=3, padx=12, pady=10, sticky="w")
-
-        CTkLabel(color_settings, text="Perfect Target:").grid(row=8, column=0, padx=12, pady=10, sticky="w")
-        perfect_color_var = StringVar(value="#64a04c")
-        self.vars["perfect_color"] = perfect_color_var
-        CTkEntry(color_settings, width=120, textvariable=perfect_color_var).grid(row=8, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(color_settings, text="Tolerance:").grid(row=8, column=2, padx=12, pady=10, sticky="w")
-        perfect_cast_tolerance_var = StringVar(value="14")
-        self.vars["perfect_cast_tolerance"] = perfect_cast_tolerance_var
-        perfect_cast_tolerance_entry = CTkEntry(color_settings, width=120, textvariable=perfect_cast_tolerance_var)
-        perfect_cast_tolerance_entry.grid(row=8, column=3, padx=12, pady=10, sticky="w")
-
-        CTkLabel(color_settings, text="Casting:").grid(row=9, column=0, padx=12, pady=10, sticky="w")
-        perfect_color2_var = StringVar(value="#d4d3ca")
-        self.vars["perfect_color2"] = perfect_color2_var
-        CTkEntry(color_settings, width=120, textvariable=perfect_color2_var).grid(row=9, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(color_settings, text="Tolerance:").grid(row=9, column=2, padx=12, pady=10, sticky="w")
-        perfect_cast2_tolerance_var = StringVar(value="12")
-        self.vars["perfect_cast2_tolerance"] = perfect_cast2_tolerance_var
-        perfect_cast2_tolerance_entry = CTkEntry(color_settings, width=120, textvariable=perfect_cast2_tolerance_var)
-        perfect_cast2_tolerance_entry.grid(row=9, column=3, padx=12, pady=10, sticky="w")
-
     def build_automation_tab(self, parent):
         # Configure scroll bar
         scroll = CTkScrollableFrame(parent)
@@ -744,37 +721,47 @@ class App(CTk):
         self.perfect_casting.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
 
         CTkLabel(self.perfect_casting, text="Perfect Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
-        CTkLabel(self.perfect_casting, text="Perfect Cast Scan FPS:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Green (Perfect Cast) Tolerance:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
+        perfect_cast_tolerance_var = StringVar(value="14")
+        self.vars["perfect_cast_tolerance"] = perfect_cast_tolerance_var
+        perfect_cast_tolerance_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_cast_tolerance_var)
+        perfect_cast_tolerance_entry.grid(row=1, column=1, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="White (Perfect Cast) Tolerance:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
+        perfect_cast2_tolerance_var = StringVar(value="12")
+        self.vars["perfect_cast2_tolerance"] = perfect_cast2_tolerance_var
+        perfect_cast2_tolerance_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_cast2_tolerance_var)
+        perfect_cast2_tolerance_entry.grid(row=2, column=1, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Perfect Cast Scan FPS:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
         cast_scan_delay_var = StringVar(value="0.05")
         self.vars["cast_scan_delay"] = cast_scan_delay_var
         cast_scan_delay_entry = CTkEntry(self.perfect_casting, width=120, textvariable=cast_scan_delay_var)
-        cast_scan_delay_entry.grid(row=1, column=1, padx=12, pady=10, sticky="w")
-        CTkLabel(self.perfect_casting, text="Failsafe Release Timeout:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
+        cast_scan_delay_entry.grid(row=3, column=1, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Failsafe Release Timeout:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
         perfect_max_time_var = StringVar(value="3.5")
         self.vars["perfect_max_time"] = perfect_max_time_var
         perfect_max_time_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_max_time_var)
-        perfect_max_time_entry.grid(row=2, column=1, padx=12, pady=10, sticky="w")
+        perfect_max_time_entry.grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(self.perfect_casting, text="Perfect Cast Release Method:").grid(row=3, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(self.perfect_casting, text="Perfect Cast Release Method:").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
         release_method_var = StringVar(value="Simple")
         self.vars["release_method"] = release_method_var
         release_method_cb = CTkComboBox(self.perfect_casting, values=["Velocity-based", "Simple"], 
                                variable=release_method_var, command=lambda v: self.set_status(f"Perfect Cast Release Method: {v}")
                                )
-        release_method_cb.grid(row=3, column=1, padx=12, pady=10, sticky="w")
+        release_method_cb.grid(row=5, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["release_method"] = release_method_cb
 
-        CTkLabel(self.perfect_casting, text="Perfect Cast Release Delay:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Perfect Cast Release Delay:").grid(row=6, column=0, padx=12, pady=10, sticky="w")
         perfect_release_delay_var = StringVar(value="0")
         self.vars["perfect_release_delay"] = perfect_release_delay_var
         perfect_release_delay_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_release_delay_var)
-        perfect_release_delay_entry.grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        perfect_release_delay_entry.grid(row=6, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(self.perfect_casting, text="Perfect Cast Threshold (pixels):").grid(row=5, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Perfect Cast Threshold (pixels):").grid(row=7, column=0, padx=12, pady=10, sticky="w")
         perfect_threshold_var = StringVar(value="30")
         self.vars["perfect_threshold"] = perfect_threshold_var
         perfect_threshold_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_threshold_var)
-        perfect_threshold_entry.grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        perfect_threshold_entry.grid(row=7, column=1, padx=12, pady=10, sticky="w")
 
         shake_configuration = CTkFrame(scroll, border_width=2)
         shake_configuration.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
@@ -836,9 +823,9 @@ class App(CTk):
         CTkEntry(ratio_settings, width=120, textvariable=restart_delay_var ).grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(ratio_settings, text="Animation Delay (seconds):").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
-        bait_delay_var = StringVar(value="0.6")
-        self.vars["bait_delay"] = bait_delay_var
-        CTkEntry(ratio_settings, width=120, textvariable=bait_delay_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        animation_delay_var = StringVar(value="0.6")
+        self.vars["animation_delay"] = animation_delay_var
+        CTkEntry(ratio_settings, width=120, textvariable=animation_delay_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(ratio_settings, text="Note Tracking Ratio:").grid(row=6, column=0, padx=12, pady=10, sticky="w")
         note_track_ratio_var = StringVar(value="0.05")
@@ -1251,12 +1238,11 @@ class App(CTk):
             json.dump(data, f, indent=4)
     # Key press functions
     def _apply_hotkeys_from_vars(self):
-        """Apply hotkey StringVars to the live hotkey attributes used by on_key_press."""
-        self.hotkey_start = self._string_to_key(self.vars["start_key"].get())
-        self.hotkey_change_areas = self._string_to_key(self.vars["change_bar_areas_key"].get())
-        self.hotkey_screenshot = self._string_to_key(self.vars["screenshot_key"].get())
-        self.hotkey_stop = self._string_to_key(self.vars["stop_key"].get())
-
+            """Apply hotkey StringVars to the live hotkey attributes used by on_key_press."""
+            self.hotkey_start = self._string_to_key(self.vars["start_key"].get())
+            self.hotkey_change_areas = self._string_to_key(self.vars["change_bar_areas_key"].get())
+            self.hotkey_screenshot = self._string_to_key(self.vars["screenshot_key"].get())
+            self.hotkey_stop = self._string_to_key(self.vars["stop_key"].get())
     def _string_to_key(self, key_string):
         key_string = key_string.strip().lower()
 
@@ -1264,22 +1250,13 @@ class App(CTk):
             return Key[key_string]
         except KeyError:
             return key_string  # normal character keys
-
-    def _normalize_hotkey_value(self, hotkey):
-        if isinstance(hotkey, Key):
-            return str(hotkey).replace("Key.", "").lower()
-        return str(hotkey).strip().lower()
-
     def normalize_key(self, key):
         try:
             return key.char.lower()  # letter keys
-        except AttributeError:
+        except:
             return str(key).replace("Key.", "").lower()
-
     def on_key_press(self, key):
-        pressed_key = self.normalize_key(key)
-
-        if pressed_key == self._normalize_hotkey_value(self.hotkey_start) and not self.macro_running:
+        if key == self.hotkey_start and not self.macro_running:
             # Save settings
             config_name = self.config_var.get()
             self.save_settings(config_name)
@@ -1290,13 +1267,13 @@ class App(CTk):
                 self.after(0, self.withdraw)
                 threading.Thread(target=self.start_macro, daemon=True).start() # This will start the macro in a new thread, allowing the GUI to remain responsive
 
-        elif pressed_key == self._normalize_hotkey_value(self.hotkey_change_areas):
+        elif key == self.hotkey_change_areas:
             self.open_triple_area_selector()
 
-        elif pressed_key == self._normalize_hotkey_value(self.hotkey_screenshot):
+        elif self.normalize_key(key) == self.vars["screenshot_key"].get().lower():
             self._take_debug_screenshot()
 
-        elif pressed_key == self._normalize_hotkey_value(self.hotkey_stop):
+        elif key == self.hotkey_stop:
             self.stop_macro()
     def set_status(self, text, key=None):
         self.status_label.configure(text=text)
@@ -1642,76 +1619,86 @@ class App(CTk):
 
         return full_arr[y1:y2, x1:x2].copy()
 
-    def _capture_loop(
+    def _capture_loop_minigame(
         self,
-        stop_event,
+        fish_left,
+        fish_top,
+        fish_right,
+        fish_bottom,
+        shake_left,
+        shake_top,
+        shake_right,
+        shake_bottom,
+        friend_left,
+        friend_top,
+        friend_right,
+        friend_bottom,
         scan_delay,
-        # Minigame regions (all None for perfect-cast mode)
-        fish_left=None, fish_top=None, fish_right=None, fish_bottom=None,
-        shake_left=None, shake_top=None, shake_right=None, shake_bottom=None,
-        friend_left=None, friend_top=None, friend_right=None, friend_bottom=None,
-        restart_method=None,
-        # Perfect-cast region (None for minigame mode)
-        cast_left=None, cast_top=None, cast_right=None, cast_bottom=None,
+        restart_method
     ):
         """
-        Unified capture thread used by both perfect cast and the minigame.
-
-        Minigame mode  – pass fish/shake/friend coords + restart_method.
-                         Writes _cap_fish_img, _cap_gift_img, _cap_friend_img
-                         and sets _cap_event.
-
-        Perfect-cast mode – pass cast_left/top/right/bottom only.
-                            Writes _cast_cap_img and sets _cast_cap_event.
-
-        In both modes the thread runs until stop_event is set OR
-        self.macro_running becomes False, then it fires the relevant event
-        one final time so the consumer can unblock and notice the stop.
+        Dedicated capture thread for the minigame.
         """
+        monitor_dict = {}
         thread_local = threading.local()
-        monitor_dict = {}  # kept for API compat; _grab_screen_region_cap ignores it now
-        perfect_cast_mode = cast_left is not None
 
-        while self.macro_running and not stop_event.is_set():
-            if perfect_cast_mode:
-                img = self._grab_screen_region_cap(
-                    cast_left, cast_top, cast_right, cast_bottom,
+        while self.macro_running:
+            fish_img = self._grab_screen_region_cap(
+                fish_left, fish_top, fish_right, fish_bottom,
+                monitor_dict, thread_local
+            )
+            gift_img = self._grab_screen_region_cap(
+                shake_left, shake_top, shake_right, shake_bottom,
+                monitor_dict, thread_local
+            )
+            if restart_method == "Friend Area":
+                friend_img = self._grab_screen_region_cap(
+                    friend_left, friend_top, friend_right, friend_bottom,
                     monitor_dict, thread_local
                 )
-                with self._cast_cap_lock:
-                    self._cast_cap_img = img
-                    self._cast_cap_event.set()
             else:
-                fish_img = self._grab_screen_region_cap(
-                    fish_left, fish_top, fish_right, fish_bottom,
-                    monitor_dict, thread_local
-                )
-                gift_img = self._grab_screen_region_cap(
-                    shake_left, shake_top, shake_right, shake_bottom,
-                    monitor_dict, thread_local
-                )
-                friend_img = (
-                    self._grab_screen_region_cap(
-                        friend_left, friend_top, friend_right, friend_bottom,
-                        monitor_dict, thread_local
-                    )
-                    if restart_method == "Friend Area"
-                    else None
-                )
-                with self._cap_lock:
-                    self._cap_fish_img   = fish_img
-                    self._cap_gift_img   = gift_img
-                    self._cap_friend_img = friend_img
-                    self._cap_event.set()
+                friend_img = None
+
+            with self._cap_lock:
+                self._cap_fish_img = fish_img
+                self._cap_gift_img = gift_img
+                self._cap_friend_img = friend_img
+                self._cap_event.set()
 
             if scan_delay > 0:
                 time.sleep(scan_delay)
 
-        # Unblock the consumer so it can detect the stop cleanly
-        if perfect_cast_mode:
-            self._cast_cap_event.set()
-        else:
-            self._cap_event.set()
+        self._cap_event.set()
+    def _capture_loop_perfect_cast(
+        self,
+        shake_left,
+        shake_top,
+        shake_right,
+        shake_bottom,
+        scan_delay
+    ):
+        """
+        Dedicated capture thread for perfect cast.
+        Grabs the full screen once, then crops to the shake region,
+        matching the optimized pattern used by the minigame capture thread.
+        """
+        monitor_dict = {}
+        thread_local = threading.local()
+
+        while self.macro_running:
+            img = self._grab_screen_region_cap(
+                shake_left, shake_top, shake_right, shake_bottom,
+                monitor_dict, thread_local
+            )
+
+            with self._cast_cap_lock:
+                self._cast_cap_img = img
+                self._cast_cap_event.set()
+
+            if scan_delay > 0:
+                time.sleep(scan_delay)
+
+        self._cast_cap_event.set()
 
     # Pixel search
     def _find_first_pixel(self, frame, hex, tolerance=10):
@@ -2136,7 +2123,7 @@ class App(CTk):
         """
 
         now = time.perf_counter()
-        pd_clamp = float(self.vars["pid_clamp"].get() or 100)  # Changed default to 1.0 like comet
+        pd_clamp = float(self.vars["pid_clamp"].get() or 100)
         # first sample: initialize state and return zero control
         if self.last_time is None:
             self.last_time = now
@@ -2146,6 +2133,9 @@ class App(CTk):
             return 0.0
 
         dt = now - self.last_time
+        # Base DT at stable 60fps: 0.06
+        multiplier = round(dt / 0.06, 2)
+
         if dt <= 0:
             return 0.0
 
@@ -2168,7 +2158,7 @@ class App(CTk):
                 d_term = kd * (error - self.prev_error) / dt
 
         # Combined control signal (PD controller output)
-        control_signal = p_term + d_term
+        control_signal = (p_term + d_term) * multiplier # Respond appropriately, not weaker
         control_signal = max(-pd_clamp, min(pd_clamp, control_signal))  # Clamp output
 
         # update history
@@ -2178,7 +2168,6 @@ class App(CTk):
             self.last_bar_x = bar_center_x
 
         return control_signal
-    
     def _reset_pid_state(self):
         """
         Reset PD/PID control state variables for a new minigame cycle.
@@ -2222,7 +2211,7 @@ class App(CTk):
             shake_y = int(self.SCREEN_HEIGHT * 0.3)
         self._reset_pid_state()
         self.set_status("Macro Status: Running")
-        bait_delay = float(self.vars["bait_delay"].get())
+        animation_delay = float(self.vars["animation_delay"].get())
         if self.vars["auto_zoom"].get() == "on":
             for _ in range(20):
                 mouse_controller.scroll(0, 1)
@@ -2286,7 +2275,7 @@ class App(CTk):
 
             # Fish (minigame)
             self.set_status("Fishing")
-            time.sleep(bait_delay)
+            time.sleep(animation_delay)
             self._enter_minigame()
             # Restart: When minigame ends, loop repeats from Select Rod
     def _execute_cast_normal(self):
@@ -2361,15 +2350,9 @@ class App(CTk):
         # --- Start dedicated capture thread ---
         self._cast_cap_img = None
         self._cast_cap_event.clear()
-        _cast_stop = threading.Event()
         cast_cap_thread = threading.Thread(
-            target=self._capture_loop,
-            kwargs=dict(
-                stop_event=_cast_stop,
-                scan_delay=scan_delay,
-                cast_left=shake_left, cast_top=shake_top,
-                cast_right=shake_right, cast_bottom=shake_bottom,
-            ),
+            target=self._capture_loop_perfect_cast,
+            args=(shake_left, shake_top, shake_right, shake_bottom, scan_delay),
             daemon=True
         )
         cast_cap_thread.start()
@@ -2396,7 +2379,6 @@ class App(CTk):
             green_pixels = self._pixel_search(frame, green_color, green_tolerance)
             if not green_pixels:
                 if time.time() - start_time > max_time:
-                    _cast_stop.set()
                     mouse_controller.release(Button.left)
                     return
                 continue
@@ -2439,6 +2421,11 @@ class App(CTk):
                 green_y_adjusted = green_y_adjusted + green_offset
                 green_y_canvas2  = int((green_y_adjusted / shake_height) * fish_width) + fish_top
 
+            # Status
+            self.set_overlay_status(0, "Casting Mode: Perfect")
+            self.set_overlay_status(1, f"Green position: {green_y_canvas}")
+            self.set_overlay_status(2, f"White position: {white_y_canvas}")
+
             # Draw overlay
             if self.vars["fish_overlay"].get() == "Enabled":
                 if self.vars["release_method"].get() == "Velocity-based":
@@ -2451,17 +2438,12 @@ class App(CTk):
             distance = abs(green_x - white_x)
             if distance < perfect_threshold:
                 time.sleep(release_delay)
-                _cast_stop.set()
                 mouse_controller.release(Button.left)
                 return
 
             if time.time() - start_time > max_time:
-                _cast_stop.set()
                 mouse_controller.release(Button.left)
                 return
-        # Cast loop exited because macro was stopped externally
-        _cast_stop.set()
-        mouse_controller.release(Button.left)
     def _execute_shake_click(self):
         """
         Search for first shake pixel then click
@@ -2752,19 +2734,14 @@ class App(CTk):
         maelstrom_right_section = right_ratio  # Right section ratio
         # Dedicated thread for screen capture
         scan_delay = float(self.vars["minigame_scan_delay"].get() or 0.05)
-        _minigame_stop = threading.Event()
         cap_thread = threading.Thread(
-            target=self._capture_loop,
-            kwargs=dict(
-                stop_event=_minigame_stop,
-                scan_delay=scan_delay,
-                fish_left=fish_left, fish_top=fish_top,
-                fish_right=fish_right, fish_bottom=fish_bottom,
-                shake_left=shake_left, shake_top=shake_top,
-                shake_right=shake_right, shake_bottom=shake_bottom,
-                friend_left=friend_left, friend_top=friend_top,
-                friend_right=friend_right, friend_bottom=friend_bottom,
-                restart_method=restart_method,
+            target=self._capture_loop_minigame,
+            args=(
+                fish_left, fish_top, fish_right, fish_bottom,
+                shake_left, shake_top, shake_right, shake_bottom,
+                friend_left, friend_top, friend_right, friend_bottom,
+                scan_delay,
+                restart_method
             ),
             daemon=True
         )
@@ -2792,7 +2769,6 @@ class App(CTk):
 
             # Failsafe
             if img is None:
-                _minigame_stop.set()
                 return
             # Stabilize frame
             deadzone_action = deadzone_action + 1
@@ -2827,7 +2803,6 @@ class App(CTk):
                 else:
                     if friend_x is not None:
                         release_mouse()
-                        _minigame_stop.set()
                         time.sleep(restart_delay)
                         return
                     else:
@@ -2841,7 +2816,6 @@ class App(CTk):
                 else:
                     if left_x is None and right_x is None:
                         release_mouse()
-                        _minigame_stop.set()
                         time.sleep(restart_delay)
                         return
                     else:
@@ -2851,7 +2825,6 @@ class App(CTk):
                     self.last_fish_x = fish_x
                 else:
                     release_mouse()
-                    _minigame_stop.set()
                     time.sleep(restart_delay)
                     return
             # Compute bar variables for calculations
@@ -2912,7 +2885,6 @@ class App(CTk):
                 # Indicator failsafe
                 if arrow_indicator_x is None:
                     controller_mode = 3
-                    _minigame_stop.set()
                     return
                 # Capture width and estimate bar center
                 capture_width = fish_right - fish_left
@@ -3075,8 +3047,6 @@ class App(CTk):
                         self.draw_overlay(bar_center=cc, box_size=cs, color="orange", canvas_offset=fl)
                     )
             time.sleep(0.01)
-        # Minigame loop exited (macro stopped externally) — tell the capture thread to stop
-        _minigame_stop.set()
     def stop_macro(self):
         if not self.macro_running:
             return
