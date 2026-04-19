@@ -14,7 +14,7 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.13"
+                  python-version: "3.12"
 
             - name: Install dependencies
               run: |
@@ -24,29 +24,7 @@ jobs:
             - name: Build EXE with PyInstaller
               shell: cmd
               run: |
-                  pyinstaller --onefile --windowed PyWareFishingV3.py ^
-                    --icon="icon.ico" \
-                    --hidden-import=cv2 ^
-                    --hidden-import=numpy ^
-                    --hidden-import=PIL ^
-                    --hidden-import=PIL._tkinter_finder ^
-                    --hidden-import=customtkinter ^
-                    --hidden-import=pynput ^
-                    --hidden-import=pynput.keyboard ^
-                    --hidden-import=pynput.mouse ^
-                    --hidden-import=mss ^
-                    --hidden-import=mss.windows ^
-                    --hidden-import=threading ^
-                    --hidden-import=time ^
-                    --hidden-import=json ^
-                    --hidden-import=os ^
-                    --hidden-import=subprocess ^
-                    --hidden-import=webbrowser ^
-                    --hidden-import=ctypes ^
-                    --collect-all customtkinter ^
-                    --collect-all pynput ^
-                    --add-data "configs;configs" ^
-                    --name "PyWare"
+                  pyinstaller --onefile --windowed IcantFish.py --hidden-import=cv2 --hidden-import=numpy --hidden-import=PIL --hidden-import=PIL._tkinter_finder --hidden-import=customtkinter --hidden-import=pynput --hidden-import=pynput.keyboard --hidden-import=pynput.mouse --hidden-import=mss --hidden-import=mss.windows --hidden-import=threading --hidden-import=time --hidden-import=json --hidden-import=os --hidden-import=subprocess --hidden-import=webbrowser --hidden-import=ctypes --collect-all customtkinter --collect-all pynput --add-data "configs;configs" --name PyWare
 
             - name: List dist contents
               run: |
