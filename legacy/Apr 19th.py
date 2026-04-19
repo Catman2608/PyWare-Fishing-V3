@@ -2758,7 +2758,7 @@ class App(CTk):
                 mouse_controller.release(Button.left)
                 mouse_down = False
         while self.macro_running: # Main macro loop
-            if not self._cap_event.wait(timeout=1.0):
+            if not self._cap_event.wait(timeout=0.5):
                 continue
 
             with self._cap_lock:

@@ -3216,7 +3216,6 @@ class App(CTk):
             # Timeout avoids a deadlock if macro_running flips to False
             # while we're waiting.
             self._cap_event.wait(timeout=0.5)
-            self._cap_event.clear()
 
             with self._cap_lock:
                 img      = self._cap_fish_img

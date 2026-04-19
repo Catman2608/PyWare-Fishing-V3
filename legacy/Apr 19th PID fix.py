@@ -1735,6 +1735,7 @@ class App(CTk):
         perfect_cast_mode = cast_left is not None
 
         while self.macro_running and not stop_event.is_set():
+            _loop_start = time.perf_counter()
             if perfect_cast_mode:
                 img = self._grab_screen_region_cap(
                     cast_left, cast_top, cast_right, cast_bottom,
@@ -1764,10 +1765,16 @@ class App(CTk):
                     self._cap_fish_img   = fish_img
                     self._cap_gift_img   = gift_img
                     self._cap_friend_img = friend_img
+                    # Only set the event when ALL three images are freshly written.
+                    # This prevents the consumer from waking on a partial update.
                     self._cap_event.set()
+                    self._cap_frame_id = getattr(self, '_cap_frame_id', 0) + 1
 
-            if scan_delay > 0:
-                time.sleep(scan_delay)
+            _loop_end = time.perf_counter()
+            _elapsed = _loop_end - _loop_start
+            _remaining = scan_delay - _elapsed
+            if _remaining > 0:
+                time.sleep(_remaining)
 
         # Unblock the consumer so it can detect the stop cleanly
         if perfect_cast_mode:
@@ -2120,13 +2127,15 @@ class App(CTk):
 
         now = time.perf_counter()
         pd_clamp = float(self.vars["pid_clamp"].get() or 100)  # Changed default to 100 like comet
-        # first sample: initialize state and return zero control
+        # first sample: seed state with real error so the first output is
+        # proportional (not zero), avoiding the startup hold→release jitter.
         if self.last_time is None:
             self.last_time = now
             self.prev_error = error
             if bar_center_x is not None:
                 self.last_bar_x = bar_center_x
-            return 0.0
+            kp, _ = self._get_pid_gains()
+            return max(-pd_clamp, min(pd_clamp, kp * error))
 
         dt = now - self.last_time
         if dt <= 0:
@@ -2825,8 +2834,6 @@ class App(CTk):
         colors_were_missing = False  # Track if colors were lost
         maelstrom_left_section = left_ratio  # Left section ratio
         maelstrom_right_section = right_ratio  # Right section ratio
-        # Reset PID
-        self._reset_pid_state()
         # Dedicated thread for screen capture
         scan_delay = float(self.vars["minigame_scan_delay"].get() or 0.05)
         _minigame_stop = threading.Event()
@@ -2857,11 +2864,18 @@ class App(CTk):
             if mouse_down:
                 mouse_controller.release(Button.left)
                 mouse_down = False
+        _last_consumed_frame_id = -1
         while self.macro_running: # Main macro loop
-            if not self._cap_event.wait(timeout=0.5):
+            if not self._cap_event.wait(timeout=0.5):  # reduced from 1.0 → less stall
                 continue
 
             with self._cap_lock:
+                current_frame_id = getattr(self, '_cap_frame_id', 0)
+                if current_frame_id == _last_consumed_frame_id:
+                    # Producer has not written a new frame yet — spin back
+                    self._cap_event.clear()
+                    continue
+                _last_consumed_frame_id = current_frame_id
                 img = self._cap_fish_img
                 note_img = self._cap_gift_img
                 friend_img = self._cap_friend_img
@@ -2871,10 +2885,15 @@ class App(CTk):
             if img is None:
                 _minigame_stop.set()
                 return
-            # Stabilize frame
-            deadzone_action = deadzone_action + 1
-            if deadzone_action == 2:
-                deadzone_action = 0
+            # Stabilize frame – use time-based hysteresis instead of a
+            # frame-counter toggle so the hold/release decision doesn't flip
+            # every other loop tick and cause back-and-forth oscillation.
+            now_dz = time.perf_counter()
+            if not hasattr(self, '_dz_last_switch_time'):
+                self._dz_last_switch_time = 0.0
+            if (now_dz - self._dz_last_switch_time) >= 0.04:  # 40 ms minimum between state changes
+                deadzone_action = 1 - deadzone_action          # 0 → 1 → 0 …
+                self._dz_last_switch_time = now_dz
             # Do pixel and image search
             # Image search will be added in the future, for now this is just a wrapper 
             # around the pixel search with some extra logic for clicking and resetting PID state when bars are lost
@@ -2933,8 +2952,6 @@ class App(CTk):
                     return
             # Compute bar variables for calculations
             bars_found = left_x is not None and right_x is not None
-            max_left = 0
-            max_right = 0
             if bars_found == True:
                 bar_size = right_x - left_x # Don't add fish left here
                 bar_center = (left_x + bar_size // 2) + fish_left # ADD FISH LEFT HERE
@@ -2974,8 +2991,8 @@ class App(CTk):
                 elif track_notes == "off":
                     pass
                 # Compute bar left and bar right (screen coords)
-                bar_left_screen  = left_x  + fish_left - 80
-                bar_right_screen = right_x + fish_left + 80
+                bar_left_screen  = left_x  + fish_left
+                bar_right_screen = right_x + fish_left
                 # Check max left and max right
                 if max_left is not None and fish_x <= max_left: # Max left and right check (inside bar)
                     controller_mode = 3
@@ -3003,8 +3020,8 @@ class App(CTk):
                 # Now use estimated bar to control
                 if estimated_bar_center is not None:
                     bar_center = int(estimated_bar_center + fish_left)
-                    bar_left_screen  = estimated_left  + fish_left - 80   # ← add this
-                    bar_right_screen = estimated_right + fish_left + 80   # ← add this
+                    bar_left_screen  = estimated_left  + fish_left   # ← add this
+                    bar_right_screen = estimated_right + fish_left   # ← add this
                     bar_size = bar_right_screen - bar_left_screen
                     if bar_left_screen <= fish_x <= bar_right_screen:
                         if track_charges == "on":
@@ -3038,7 +3055,6 @@ class App(CTk):
                         hold_mouse()
                     else:
                         release_mouse()
-                print(error)
             elif controller_mode == 1 and bar_center is not None: # Simple tracking
                 control = fish_x - bar_center
                 # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
