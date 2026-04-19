@@ -499,7 +499,7 @@ class App(CTk):
         self.hotkey_start = Key.f5
         self.hotkey_stop = Key.f7
         self.hotkey_change_areas = Key.f6 # added for the bar area selector
-        self.hotkey_reserved = Key.f8
+        self.hotkey_screenshot = Key.f8
         self.hotkey_labels = {}  # Store label widgets for dynamic updates
 
         # Macro state
@@ -2974,8 +2974,8 @@ class App(CTk):
                 elif track_notes == "off":
                     pass
                 # Compute bar left and bar right (screen coords)
-                bar_left_screen  = left_x  + fish_left - 80
-                bar_right_screen = right_x + fish_left + 80
+                bar_left_screen  = left_x  + fish_left
+                bar_right_screen = right_x + fish_left
                 # Check max left and max right
                 if max_left is not None and fish_x <= max_left: # Max left and right check (inside bar)
                     controller_mode = 3
@@ -3003,8 +3003,8 @@ class App(CTk):
                 # Now use estimated bar to control
                 if estimated_bar_center is not None:
                     bar_center = int(estimated_bar_center + fish_left)
-                    bar_left_screen  = estimated_left  + fish_left - 80   # ← add this
-                    bar_right_screen = estimated_right + fish_left + 80   # ← add this
+                    bar_left_screen  = estimated_left  + fish_left   # ← add this
+                    bar_right_screen = estimated_right + fish_left   # ← add this
                     bar_size = bar_right_screen - bar_left_screen
                     if bar_left_screen <= fish_x <= bar_right_screen:
                         if track_charges == "on":

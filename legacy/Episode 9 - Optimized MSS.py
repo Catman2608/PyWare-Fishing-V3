@@ -291,7 +291,7 @@ class App(CTk):
         self.hotkey_start = Key.f5
         self.hotkey_stop = Key.f7
         self.hotkey_change_areas = Key.f6 # added for the bar area selector
-        self.hotkey_reserved = Key.f8
+        self.hotkey_screenshot = Key.f8
         self.hotkey_labels = {}  # Store label widgets for dynamic updates
 
         # Macro state

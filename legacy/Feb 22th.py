@@ -145,7 +145,7 @@ class App(CTk):
         # Hotkey variables
         self.hotkey_start = Key.f5
         self.hotkey_stop = Key.f7
-        self.hotkey_reserved = Key.f8
+        self.hotkey_screenshot = Key.f8
         self.hotkey_labels = {}  # Store label widgets for dynamic updates
 
         # Start hotkey listener
