@@ -314,6 +314,166 @@ class TripleAreaSelector:
             self.parent.set_status("Area selector closed")
         self.callback(self.shake,self.fish,self.friend)
         self.window.destroy()
+
+# ---- EYEDROPPER CLASS ----
+class Eyedropper:
+    """Encapsulates color picking eyedropper functionality."""
+    def __init__(self, parent_app):
+        self.parent_app = parent_app
+        self.window = None
+        self.last_picked_color = None
+
+    def start(self):
+        """Launch the eyedropper overlay."""
+        self.window = tk.Toplevel(self.parent_app)
+        w = self.parent_app.winfo_screenwidth()
+        h = self.parent_app.winfo_screenheight()
+        self.window.geometry(f"{w}x{h}+0+0")
+        self.window.attributes("-alpha", 0.01)
+        self.window.attributes("-topmost", True)
+        self.window.config(cursor="crosshair")
+        self.window.bind("<Motion>", self._on_hover)
+        self.window.bind("<Button-1>", self._on_click)
+        self.window.bind("<Escape>", self.close)
+
+    def _on_hover(self, event):
+        """Update status with current pixel color."""
+        x = self.parent_app.winfo_pointerx()
+        y = self.parent_app.winfo_pointery()
+        pixel = self._grab_pixel(x, y)
+        if pixel:
+            r, g, b = pixel
+            hex_color = f"#{r:02X}{g:02X}{b:02X}"
+            self.parent_app.set_status(f"Hover: {hex_color} | Click to pick")
+
+    def _on_click(self, event):
+        """Pick the color at current position."""
+        x = self.parent_app.winfo_pointerx()
+        y = self.parent_app.winfo_pointery()
+        
+        # Hide window before capturing to avoid window blending
+        if self.window and self.window.winfo_exists():
+            self.window.attributes("-alpha", 0.0)
+            self.parent_app.update_idletasks()
+        time.sleep(0.05)
+        
+        pixel = self._grab_pixel(x, y)
+        if pixel:
+            r, g, b = pixel
+            self.last_picked_color = f"#{r:02X}{g:02X}{b:02X}"
+            self.parent_app.set_status(f"Picked: {self.last_picked_color}")
+        
+        self.close()
+
+    def _grab_pixel(self, x, y):
+        """Grab RGB pixel at (x, y). Returns (r, g, b) tuple or None."""
+        frame = self.parent_app._grab_screen_region(x, y, x + 1, y + 1)
+        if frame is None or frame.size == 0:
+            return None
+        b, g, r = int(frame[0, 0, 0]), int(frame[0, 0, 1]), int(frame[0, 0, 2])
+        return r, g, b
+
+    def close(self, event=None):
+        """Close the eyedropper window."""
+        if self.window and self.window.winfo_exists():
+            self.window.destroy()
+        self.window = None
+
+# ---- FISH OVERLAY CLASS ----
+class FishOverlay:
+    """Encapsulates the fishing minigame overlay visualization."""
+    def __init__(self, parent_app):
+        self.parent_app = parent_app
+        self.window = None
+        self.canvas = None
+
+    def init_window(self):
+        """Create and initialize the overlay window and canvas."""
+        if self.window and self.window.winfo_exists():
+            return
+
+        self.window = tk.Toplevel(self.parent_app)
+        overlay_x = int(self.parent_app.SCREEN_WIDTH * 0.5) - 400
+        overlay_y = int(self.parent_app.SCREEN_HEIGHT * 0.65)
+        self.window.geometry(f"800x50+{overlay_x}+{overlay_y}")
+        
+        if sys.platform == "darwin":
+            self.window.overrideredirect(False)
+        else:
+            self.window.overrideredirect(True)
+        
+        self.window.attributes("-topmost", True)
+        self.canvas = tk.Canvas(
+            self.window,
+            width=800,
+            height=60,
+            bg="#1d1d1d",
+            highlightthickness=0
+        )
+        self.canvas.pack(fill="both", expand=True)
+
+    def show(self):
+        """Show the overlay window."""
+        self.init_window()
+        if self.window and self.window.winfo_exists():
+            self.window.deiconify()
+            self.window.lift()
+
+    def hide(self):
+        """Hide the overlay window."""
+        if self.window and self.window.winfo_exists():
+            self.window.withdraw()
+
+    def clear(self):
+        """Clear all drawn elements from the overlay."""
+        if not self.canvas or not self.canvas.winfo_exists():
+            return
+        self.canvas.delete("all")
+
+    def draw(self, bar_center, box_size, color, canvas_offset, show_bar_center=False, bar_y1=10, bar_y2=40):
+        """Draw a box on the overlay."""
+        if bar_center is None:
+            return
+
+        self.init_window()
+        box_size = int(box_size / 2)
+        left_edge = bar_center - box_size
+        right_edge = bar_center + box_size
+        bx1 = left_edge - canvas_offset
+        bx2 = right_edge - canvas_offset
+        center_x = bar_center - canvas_offset
+
+        def _draw():
+            self.canvas.create_rectangle(bx1, bar_y1, bx2, bar_y2, 
+                                        outline=color, width=2, fill="#000000")
+            if show_bar_center:
+                self.canvas.create_line(center_x, bar_y1, center_x, bar_y2,
+                                       fill="gray", width=2)
+
+        self.canvas.after(0, _draw)
+
+# ---- SIMPLE TRACKING CONTROLLER ----
+def simple_tracking_control(fish_x, bar_center, thresh, pid_clamp, deadzone_action, hold_mouse_fn, release_mouse_fn):
+    """
+    Simple tracking controller for fishing bar (controller mode 1).
+    Proportional control based on distance from bar center.
+    """
+    if bar_center is None:
+        return
+    
+    control = fish_x - bar_center
+    control = max((0 - pid_clamp), min(pid_clamp, control))
+    
+    if control > thresh:
+        hold_mouse_fn()
+    elif control < -thresh:
+        release_mouse_fn()
+    else:
+        if deadzone_action == 1:
+            hold_mouse_fn()
+        else:
+            release_mouse_fn()
+
 # Main app
 class App(CTk):
     def __init__(self):
@@ -393,11 +553,9 @@ class App(CTk):
         if sys.platform == "darwin":
             self.bind("<Configure>", lambda e: self._invalidate_scale_cache())
             
-        # Setup overlay
-        self.overlay_window = None
-        self.overlay_canvas = None
-        self.init_overlay_window()
-        self.hide_overlay()
+        # Setup overlay and eyedropper
+        self.fish_overlay = FishOverlay(self)
+        self.eyedropper = Eyedropper(self)
 
         # Create window
         self.geometry("800x600")
@@ -567,7 +725,7 @@ class App(CTk):
         color_settings.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(color_settings, text="Color Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        CTkButton(color_settings, text="Pick Colors", corner_radius=10, command=self._pick_colors).grid(row=0, column=1, padx=12, pady=12, sticky="w")
+        CTkButton(color_settings, text="Pick Colors", corner_radius=10, command=self.eyedropper.start).grid(row=0, column=1, padx=12, pady=12, sticky="w")
 
         CTkLabel(color_settings, text="Left Bar:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         left_color_var = StringVar(value="#F1F1F1")
@@ -695,34 +853,39 @@ class App(CTk):
         sw = CTkSwitch(toggles, text="Track Charges", variable=track_charges_var, onvalue="on", offvalue="off")
         sw.grid(row=3, column=1, padx=12, pady=8, sticky="w")
         self.switches["track_charges"] = sw
+        # Misc
+        misc = CTkFrame(scroll, border_width=2)
+        misc.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
 
+        CTkLabel(misc, text="Misc", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        CTkLabel(toggles, text="Select Rod Delay").grid(row=4, column=0, padx=12, pady=8, sticky="w")
+        CTkLabel(misc, text="Select Rod Delay").grid(row=1, column=0, padx=12, pady=8, sticky="w")
         bag_delay_var = StringVar(value="0.2")
         self.vars["bag_delay"] = bag_delay_var
-        bag_delay_entry = CTkEntry(toggles, width=120, textvariable=bag_delay_var)
-        bag_delay_entry.grid(row=4, column=1, padx=12, pady=8, sticky="w")
+        bag_delay_entry = CTkEntry(misc, width=120, textvariable=bag_delay_var)
+        bag_delay_entry.grid(row=1, column=1, padx=12, pady=8, sticky="w")
 
-        CTkLabel(toggles, text="Casting Mode:").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(misc, text="Casting Mode:").grid(row=2, column=0, padx=12, pady=10, sticky="w" )
         casting_mode_var = StringVar(value="Normal")
         self.vars["casting_mode"] = casting_mode_var
-        casting_cb = CTkComboBox(toggles, values=["Perfect", "Normal"], 
+        casting_cb = CTkComboBox(misc, values=["Perfect", "Normal"], 
                                variable=casting_mode_var, command=lambda v: [self.set_status(f"Casting Mode: {v}"), self.update_casting_visibility(v)]
                                )
-        casting_cb.grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        casting_cb.grid(row=2, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["casting_mode"] = casting_cb
 
-        CTkLabel(toggles, text="Shake Mode:").grid(row=6, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(misc, text="Shake Mode:").grid(row=3, column=0, padx=12, pady=10, sticky="w" )
         shake_mode_var = StringVar(value="Click")
         self.vars["shake_mode"] = shake_mode_var
-        shake_cb = CTkComboBox(toggles, values=["Click", "Navigation"], 
+        shake_cb = CTkComboBox(misc, values=["Click", "Navigation"], 
                                variable=shake_mode_var, command=lambda v: self.set_status(f"Shake Mode: {v}")
                                )
-        shake_cb.grid(row=6, column=1, padx=12, pady=10, sticky="w")
+        shake_cb.grid(row=3, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["shake_mode"] = shake_cb
+
         # Normal Casting Group
         self.normal_casting = CTkFrame(scroll, border_width=2)
-        self.normal_casting.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
+        self.normal_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(self.normal_casting, text="Normal Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(self.normal_casting, text="Delay").grid(row=1, column=0, padx=12, pady=8, sticky="w")
         delay_before_casting_var = StringVar(value="0.0")
@@ -741,7 +904,7 @@ class App(CTk):
         cast_delay_entry.grid(row=3, column=1, padx=12, pady=8, sticky="w")
         # Perfect Cast Settings 
         self.perfect_casting = CTkFrame(scroll, border_width=2)
-        self.perfect_casting.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
+        self.perfect_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
 
         CTkLabel(self.perfect_casting, text="Perfect Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(self.perfect_casting, text="Perfect Cast Scan FPS:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
@@ -777,7 +940,7 @@ class App(CTk):
         perfect_threshold_entry.grid(row=5, column=1, padx=12, pady=10, sticky="w")
 
         shake_configuration = CTkFrame(scroll, border_width=2)
-        shake_configuration.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
+        shake_configuration.grid(row=3, column=0, padx=20, pady=20, sticky="nw")
         # Shake Configuration
         CTkLabel(shake_configuration, text="Shake Configuration", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(shake_configuration, text="Shake Failsafe (attempts):").grid(row=1, column=0, padx=12, pady=10, sticky="w" )
@@ -812,7 +975,7 @@ class App(CTk):
         self.comboboxes["restart_method"] = restart_cb
 
         ratio_settings = CTkFrame(scroll, border_width=2)
-        ratio_settings.grid(row=3, column=0, padx=20, pady=20, sticky="nw")
+        ratio_settings.grid(row=4, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(ratio_settings, text="Minigame Timing and Limits", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
         CTkLabel(ratio_settings, text="Left Ratio From Side:").grid( row=1, column=0, padx=12, pady=10, sticky="w" )
@@ -851,7 +1014,7 @@ class App(CTk):
         CTkEntry(ratio_settings, width=120, textvariable=charge_track_ratio_var).grid(row=7, column=1, padx=12, pady=10, sticky="w")
 
         pid_settings = CTkFrame(scroll, border_width=2 )
-        pid_settings.grid(row=4, column=0, padx=20, pady=20, sticky="nw")
+        pid_settings.grid(row=5, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(pid_settings, text="PD Controller Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
         CTkLabel(pid_settings, text="Stable KP:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
@@ -985,10 +1148,10 @@ class App(CTk):
     def update_casting_visibility(self, mode):
         if mode == "Perfect":
             self.normal_casting.grid_remove()
-            self.perfect_casting.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
+            self.perfect_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
         else:
             self.perfect_casting.grid_remove()
-            self.normal_casting.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
+            self.normal_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
     def open_link(self, url):
         """Open a URL in the default web browser."""
         return lambda: webbrowser.open(url)
@@ -1455,86 +1618,6 @@ class App(CTk):
                 self.set_status("Saved screenshot (debug_bar.png)")
         except Exception as e:
             self.set_status(f"Error saving screenshot: {e}")
-    # Eyedropper-related functions
-    def _pick_colors(self):
-        """Live eyedropper tool."""
-        self.eyedropper = tk.Toplevel(self)
-
-        w = self.winfo_screenwidth()
-        h = self.winfo_screenheight()
-
-        self.eyedropper.geometry(f"{w}x{h}+0+0")
-
-        # Initial nearly-transparent overlay (for hover)
-        self.eyedropper.attributes("-alpha", 0.01)
-        self.eyedropper.attributes("-topmost", True)
-        self.eyedropper.config(cursor="crosshair")
-
-        self.eyedropper.bind("<Motion>", self._update_hover_color)
-        self.eyedropper.bind("<Button-1>", self._on_pick_color)
-        self.eyedropper.bind("<Escape>", self._close_eyedropper)
-
-    def _eyedropper_pixel_at(self, x, y):
-        """
-        Return (r, g, b) for the logical screen position (x, y).
-
-        The eyedropper Toplevel is hidden for the duration of the grab so the
-        compositor doesn't blend its semi-transparent surface into the captured
-        pixel (which was causing a slight brightness lift on macOS).
-
-        _grab_screen_region scales the coordinates by the retina factor, so
-        the captured region may be 2×2 physical pixels on a Retina display.
-        We always sample [0, 0] — accurate enough for colour picking.
-        """
-        frame = self._grab_screen_region(x, y, x + 1, y + 1)
-        if frame is None or frame.size == 0:
-            return None
-        b, g, r = int(frame[0, 0, 0]), int(frame[0, 0, 1]), int(frame[0, 0, 2])
-        return r, g, b
-
-    def _on_pick_color(self, event):
-        # Step 1: Save exact pointer coords BEFORE hiding
-        x = self.winfo_pointerx()
-        y = self.winfo_pointery()
-
-        # Step 2: Make window *fully invisible* (alpha = 0)
-        if self.eyedropper and self.eyedropper.winfo_exists():
-            self.eyedropper.attributes("-alpha", 0.0)
-            self.update_idletasks()   # compositor flush
-        time.sleep(0.05)  # empirical delay to ensure compositor updates (especially on Windows)
-        # Step 3: Capture pixel with no brightness contamination
-        frame = self._grab_screen_region(x, y, x + 1, y + 1)
-
-        # Step 4: Handle fails
-        if frame is None or frame.size == 0:
-            self._close_eyedropper()
-            return
-
-        b, g, r = int(frame[0, 0, 0]), int(frame[0, 0, 1]), int(frame[0, 0, 2])
-        hex_color = f"#{r:02X}{g:02X}{b:02X}"
-
-        # Step 5: Update UI
-        self.last_picked_color = hex_color
-        self.set_status(f"Picked: {hex_color}")
-
-        # Step 6: Close eyedropper
-        self._close_eyedropper()
-
-    def _update_hover_color(self, event):
-        x = self.winfo_pointerx()
-        y = self.winfo_pointery()
-
-        pixel = self._eyedropper_pixel_at(x, y)
-        if pixel is None:
-            return
-
-        r, g, b = pixel
-        hex_color = f"#{r:02X}{g:02X}{b:02X}"
-        self.set_status(f"Hover: {hex_color} | Click to pick")
-        
-    def _close_eyedropper(self, event=None):
-        if self.eyedropper:
-            self.eyedropper.destroy()
     # Grab screen and apply scale factor
     def _get_scale_factor(self):
         """
@@ -2039,85 +2122,6 @@ class App(CTk):
 
         return fish_center, left_bar_center, right_bar_center
     # Draw overlay (will be turned into a seperate class later)
-    def init_overlay_window(self):
-        """
-        Create the minigame window and canvas (only once).
-        """
-        if self.overlay_window and self.overlay_window.winfo_exists():
-            return
-
-        self.overlay_window = tk.Toplevel(self)
-        overlay_x = int(self.SCREEN_WIDTH * 0.5) - 400   # centered horizontally
-        overlay_y = int(self.SCREEN_HEIGHT * 0.65)        # 65% down the screen
-        self.overlay_window.geometry(f"800x50+{overlay_x}+{overlay_y}")
-        if sys.platform == "darwin":
-            self.overlay_window.overrideredirect(False)
-        else:
-            self.overlay_window.overrideredirect(True)
-        self.overlay_window.attributes("-topmost", True)
-
-        self.overlay_canvas = tk.Canvas(
-            self.overlay_window,
-            width=800,
-            height=60,
-            bg="#1d1d1d",
-            highlightthickness=0
-        )
-        self.overlay_canvas.pack(fill="both", expand=True)
-
-    def show_overlay(self):
-        if self.overlay_window and self.overlay_window.winfo_exists():
-            self.overlay_window.deiconify()
-            self.overlay_window.lift()
-
-    def hide_overlay(self):
-        if self.overlay_window and self.overlay_window.winfo_exists():
-            self.overlay_window.withdraw()
-
-    def clear_overlay(self):
-        if not self.overlay_canvas or not self.overlay_canvas.winfo_exists():
-            return
-        self.overlay_canvas.delete("all")
-        self.initial_bar_size = None
-
-    def draw_box(self, x1, y1, x2, y2, fill="#000000", outline="white"):
-        if not self.overlay_canvas or not self.overlay_canvas.winfo_exists():
-            return
-
-        def _draw():
-            self.overlay_canvas.create_rectangle(x1, y1, x2, y2, 
-                                                 outline=outline, width=2, fill=fill)
-
-        self.overlay_canvas.after(0, _draw)
-
-    def draw_overlay(
-        self,
-        bar_center,
-        box_size,
-        color,
-        canvas_offset,
-        show_bar_center=False,
-        bar_y1=10,
-        bar_y2=40,
-    ):
-        if bar_center is None:
-            return
-
-        box_size = int(box_size / 2)
-        left_edge = bar_center - box_size
-        right_edge = bar_center + box_size
-
-        # Convert to canvas coordinates (now canvas origin == canvas_offset, so subtraction is correct)
-        bx1 = left_edge - canvas_offset
-        bx2 = right_edge - canvas_offset
-        center_x = bar_center - canvas_offset
-
-        self.draw_box(bx1, bar_y1, bx2, bar_y2, fill="#000000", outline=color)
-
-        if show_bar_center:
-            self.overlay_canvas.create_line(center_x, bar_y1,
-                                            center_x, bar_y2,
-                                            fill="gray", width=2)
     # PID-related
     def _get_pid_gains(self, inside_bar=False):
         """Get PID gains from config, with sensible defaults."""
@@ -2253,9 +2257,9 @@ class App(CTk):
                 break
             # Toggle fish overlay
             if self.vars["fish_overlay"].get() == "on":
-                self.show_overlay()
+                self.fish_overlay.show()
             else:
-                self.hide_overlay()
+                self.fish_overlay.hide()
 
             # Cast
             self.set_status("Casting")
@@ -2376,6 +2380,10 @@ class App(CTk):
 
         start_time = time.time()
 
+        # Ensure overlay is shown for perfect cast
+        if self.vars["fish_overlay"].get() == "Enabled":
+            self.fish_overlay.show()
+
         # Perfect cast loop
         while self.macro_running:
             # Wait for the capture thread to deliver a fresh frame
@@ -2390,7 +2398,7 @@ class App(CTk):
                     return
                 continue
 
-            self.clear_overlay()
+            self.fish_overlay.clear()
 
             # --- Find green pixels ---
             green_pixels = self._pixel_search(frame, green_color, green_tolerance)
@@ -2407,9 +2415,9 @@ class App(CTk):
             # Apply user offset
             green_y_adjusted = green_y + user_green_offset
 
-            # Canvas mapping for overlay
-            green_y_canvas  = int((green_y          / shake_height) * fish_width) + fish_top
-            green_y_canvas2 = int((green_y_adjusted / shake_height) * fish_width) + fish_top
+            # Canvas mapping for overlay (canvas is 800x60, map from shake frame to canvas height)
+            green_y_canvas  = int((green_y          / shake_height) * 60)
+            green_y_canvas2 = int((green_y_adjusted / shake_height) * 60)
 
             # --- Find white pixel on the SAME Y row as the green pixel ---
             # Build a mask for whites, then filter to the row nearest green_y
@@ -2428,7 +2436,7 @@ class App(CTk):
             white_x = int(np.median(row_xs))
             white_y = best_row_y
 
-            white_y_canvas = int((white_y / shake_height) * fish_width) + fish_top
+            white_y_canvas = int((white_y / shake_height) * 60)
 
             # Velocity-based green offset
             if self.vars["release_method"].get() == "Velocity-based":
@@ -2437,14 +2445,14 @@ class App(CTk):
                     green_offset = abs(dy)
                 prev_white_y = white_y
                 green_y_adjusted = green_y_adjusted + green_offset
-                green_y_canvas2  = int((green_y_adjusted / shake_height) * fish_width) + fish_top
+                green_y_canvas2  = int((green_y_adjusted / shake_height) * 60)
 
-            # Draw overlay
+            # Draw overlay (canvas_offset=0 since the scaled positions are already relative to canvas origin)
             if self.vars["fish_overlay"].get() == "Enabled":
                 if self.vars["release_method"].get() == "Velocity-based":
-                    self.after(0, lambda y=green_y_canvas, top=fish_top: self.draw_overlay(bar_center=y, box_size=15, color="blue", canvas_offset=top))
-                self.after(0, lambda y=green_y_canvas2, top=fish_top: self.draw_overlay(bar_center=y, box_size=15, color="green", canvas_offset=top))
-                self.after(0, lambda _fx=white_y_canvas, _fl=fish_top: self.draw_overlay(bar_center=_fx, box_size=30, color="white", canvas_offset=_fl))
+                    self.after(0, lambda y=green_y_canvas, top=0: self.fish_overlay.draw(bar_center=y, box_size=15, color="blue", canvas_offset=top))
+                self.after(0, lambda y=green_y_canvas2, top=0: self.fish_overlay.draw(bar_center=y, box_size=15, color="green", canvas_offset=top))
+                self.after(0, lambda _fx=white_y_canvas, _fl=0: self.fish_overlay.draw(bar_center=_fx, box_size=30, color="white", canvas_offset=_fl))
 
             # --- Release condition: white X aligns with green X on the same Y ---
             # Distance is now measured on X axis since both pixels share the same Y row
@@ -2815,7 +2823,7 @@ class App(CTk):
             else:
                 fish_x = fish_x + fish_left
             # Fish restart and clear overlay logic with multiple restart methods and PID reset when bars are lost
-            self.clear_overlay()
+            self.fish_overlay.clear()
             if restart_method == "Friend Area":
                 friend_area = friend_img if friend_img is not None else img
                 friend_x = self._find_color_center(friend_area, "#9bff9b", 2)
@@ -2900,10 +2908,10 @@ class App(CTk):
                 # Check max left and max right
                 if max_left is not None and fish_x <= max_left: # Max left and right check (inside bar)
                     controller_mode = 3
-                    self.after(0, lambda _ml=max_left, _fl=fish_left: self.draw_overlay(bar_center=_ml, box_size=15, color="lightblue", canvas_offset=_fl))
+                    self.after(0, lambda _ml=max_left, _fl=fish_left: self.fish_overlay.draw(bar_center=_ml, box_size=15, color="lightblue", canvas_offset=_fl))
                 elif max_right is not None and fish_x >= max_right:
                     controller_mode = 2
-                    self.after(0, lambda _mr=max_right, _fl=fish_left: self.draw_overlay(bar_center=_mr, box_size=15, color="lightblue", canvas_offset=_fl))
+                    self.after(0, lambda _mr=max_right, _fl=fish_left: self.fish_overlay.draw(bar_center=_mr, box_size=15, color="lightblue", canvas_offset=_fl))
                 else:
                     controller_mode = 0
             elif arrow_center:
@@ -2938,9 +2946,9 @@ class App(CTk):
                     controller_mode = 1
             # Draw boxes
             if self.vars["fish_overlay"].get() == "on":
-                self.after(0, lambda: self.draw_overlay(bar_center=bar_center,box_size=(bar_right_screen2 - bar_left_screen2),color="pink",canvas_offset=fish_left))
-                self.after(0, lambda _bc=bar_center, _bs=bar_size, _fl=fish_left: self.draw_overlay(bar_center=_bc, box_size=_bs, color="green", canvas_offset=_fl, show_bar_center=True))
-                self.after(0, lambda: self.draw_overlay(bar_center=fish_x, box_size=10, color="red", canvas_offset=fish_left))
+                self.after(0, lambda: self.fish_overlay.draw(bar_center=bar_center,box_size=(bar_right_screen2 - bar_left_screen2),color="pink",canvas_offset=fish_left))
+                self.after(0, lambda _bc=bar_center, _bs=bar_size, _fl=fish_left: self.fish_overlay.draw(bar_center=_bc, box_size=_bs, color="green", canvas_offset=_fl, show_bar_center=True))
+                self.after(0, lambda: self.fish_overlay.draw(bar_center=fish_x, box_size=10, color="red", canvas_offset=fish_left))
             # PID loop
             if controller_mode == 0 and bar_center is not None:
                 error = fish_x - bar_center
@@ -2957,20 +2965,8 @@ class App(CTk):
                         hold_mouse()
                     else:
                         release_mouse()
-            elif controller_mode == 1 and bar_center is not None: # Simple tracking
-                control = fish_x - bar_center
-                # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
-                control = max((0 - pid_clamp), min(pid_clamp, control))
-                # Stabilize Deadzone Checker
-                if control > thresh:
-                    hold_mouse()
-                elif control < -thresh:
-                    release_mouse()
-                else:
-                    if deadzone_action == 1:
-                        hold_mouse()
-                    else:
-                        release_mouse()
+            elif controller_mode == 1:
+                simple_tracking_control(fish_x, bar_center, thresh, pid_clamp, deadzone_action, hold_mouse, release_mouse)
             elif controller_mode == 2:
                 hold_mouse()
             elif controller_mode == 3:
@@ -3072,7 +3068,7 @@ class App(CTk):
                     # print(f"Charge detected: {colors_detected}, State: {maelstrom_state}, Hold: {should_hold}")
 
                     self.after(0, lambda cc=charge_center, cs=effective_charge, fl=fish_left:
-                        self.draw_overlay(bar_center=cc, box_size=cs, color="orange", canvas_offset=fl)
+                        self.fish_overlay.draw(bar_center=cc, box_size=cs, color="orange", canvas_offset=fl)
                     )
             time.sleep(0.01)
         # Minigame loop exited (macro stopped externally) — tell the capture thread to stop
