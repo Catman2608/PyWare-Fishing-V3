@@ -2285,15 +2285,17 @@ class App(CTk):
         time.sleep(delay)  # wait for cast to register in fisch
     def _execute_cast_perfect(self):
         """
-        Find perfect cast color and cast color.
-        - Runs a dedicated screen-capture thread (like _enter_minigame).
-        - Matches the white pixel to the same Y row as the green pixel.
-        - Releases when white and green are within perfect_threshold pixels on X.
-        - Falls back to releasing on timeout.
+        V2 + V3 Hybrid:
+        - Uses threaded capture (V3)
+        - Uses Y-distance logic (V2)
+        - White detection priority:
+            1. Same Y row as green
+            2. Closest Y if none found
         """
-        # Hold click
+
         mouse_controller.press(Button.left)
-        # Get shake area
+
+        # --- SHAKE AREA ---
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -2307,64 +2309,64 @@ class App(CTk):
             shake_right  = int(self.SCREEN_WIDTH * 0.8562)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_height = shake_bottom - shake_top
-        # --- FISH AREA (for overlay canvas mapping) ---
+
+        # --- FISH AREA ---
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
-            fish_left   = fish["x"]
             fish_top    = fish["y"]
-            fish_right  = fish["x"] + fish["width"]
-            fish_bottom = fish["y"] + fish["height"]
             fish_width  = fish["width"]
         else:
-            fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
             fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
-            fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
             fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
-            fish_width  = fish_right - fish_left
-        # Perfect colors & tolerances
+            fish_width  = int(self.SCREEN_WIDTH * 0.7141) - int(self.SCREEN_WIDTH * 0.2844)
+
+        # --- SETTINGS ---
         white_color     = self.vars["perfect_color2"].get()
         green_color     = self.vars["perfect_color"].get()
-        white_tolerance = int(self.vars["perfect_cast2_tolerance"].get())
-        green_tolerance = int(self.vars["perfect_cast_tolerance"].get())
-        # Timing & threshold
-        max_time         = float(self.vars["perfect_max_time"].get())
-        perfect_threshold = int(self.vars["perfect_threshold"].get())
-        scan_delay       = float(self.vars["cast_scan_delay"].get())
-        release_delay    = float(self.vars["perfect_release_delay"].get())
+        white_tol       = int(self.vars["perfect_cast2_tolerance"].get())
+        green_tol       = int(self.vars["perfect_cast_tolerance"].get())
+
+        max_time        = float(self.vars["perfect_max_time"].get())
+        perfect_thresh  = int(self.vars["perfect_threshold"].get())
+        scan_delay      = float(self.vars["cast_scan_delay"].get())
+
+        release_delay   = float(self.vars["perfect_release_delay"].get())
         if release_delay < 0:
             user_green_offset = abs(release_delay * 10)
             release_delay = 0
         else:
             user_green_offset = 0
-        # Velocity-based variables
+
+        # --- VELOCITY ---
         prev_white_y = None
         green_offset = 0
 
-        # --- Start dedicated capture thread ---
+        # --- CAPTURE THREAD ---
         self._cast_cap_img = None
         self._cast_cap_event.clear()
         _cast_stop = threading.Event()
-        cast_cap_thread = threading.Thread(
+
+        threading.Thread(
             target=self._capture_loop,
             kwargs=dict(
                 stop_event=_cast_stop,
                 scan_delay=scan_delay,
-                cast_left=shake_left, cast_top=shake_top,
-                cast_right=shake_right, cast_bottom=shake_bottom,
+                cast_left=shake_left,
+                cast_top=shake_top,
+                cast_right=shake_right,
+                cast_bottom=shake_bottom,
             ),
             daemon=True
-        )
-        cast_cap_thread.start()
+        ).start()
 
         start_time = time.time()
 
-        # Ensure overlay is shown for perfect cast
         if self.vars["fish_overlay"].get() == "Enabled":
             self.fish_overlay.show()
 
-        # Perfect cast loop
+        # ================= LOOP =================
         while self.macro_running:
-            # Wait for the capture thread to deliver a fresh frame
+
             self._cast_cap_event.wait(timeout=0.5)
             with self._cast_cap_lock:
                 frame = self._cast_cap_img
@@ -2372,80 +2374,77 @@ class App(CTk):
 
             if frame is None:
                 if time.time() - start_time > max_time:
-                    mouse_controller.release(Button.left)
-                    return
+                    break
                 continue
 
             self.fish_overlay.clear()
 
-            # --- Find green pixels ---
-            green_pixels = self._pixel_search(frame, green_color, green_tolerance)
+            # --- GREEN ---
+            green_pixels = self._pixel_search(frame, green_color, green_tol)
             if not green_pixels:
                 if time.time() - start_time > max_time:
-                    _cast_stop.set()
-                    mouse_controller.release(Button.left)
-                    return
+                    break
                 continue
 
-            # Lowest green pixel (by Y)
+            # Use lowest green (V2 behavior)
             green_x, green_y = max(green_pixels, key=lambda p: p[1])
 
-            # Apply user offset
-            green_y_adjusted = green_y + user_green_offset
+            # Apply offset
+            green_y += user_green_offset
 
-            # Canvas mapping for overlay (canvas is 800x60, map from shake frame to canvas height)
-            green_y_canvas  = int((green_y          / shake_height) * 60)
-            green_y_canvas2 = int((green_y_adjusted / shake_height) * 60)
-
-            # --- Find white pixel on the SAME Y row as the green pixel ---
-            # Build a mask for whites, then filter to the row nearest green_y
-            white_pixels = self._pixel_search(frame, white_color, white_tolerance)
+            # --- WHITE ---
+            white_pixels = self._pixel_search(frame, white_color, white_tol)
             if not white_pixels:
                 continue
 
-            # Group white pixels by their Y coordinate, pick the row closest to green_y
-            white_by_y = {}
-            for wx, wy in white_pixels:
-                white_by_y.setdefault(wy, []).append(wx)
+            # ===== PRIORITY 1: SAME ROW =====
+            same_row = [wp for wp in white_pixels if wp[1] == green_y]
 
-            best_row_y = min(white_by_y.keys(), key=lambda wy: abs(wy - green_y))
-            # Take the leftmost white pixel on that row (or median for stability)
-            row_xs = white_by_y[best_row_y]
-            white_x = int(np.median(row_xs))
-            white_y = best_row_y
+            if same_row:
+                # Stable pick
+                white_x = int(np.median([x for x, _ in same_row]))
+                white_y = green_y
 
-            white_y_canvas = int((white_y / shake_height) * 60)
+            else:
+                # ===== PRIORITY 2: CLOSEST Y =====
+                white_x, white_y = min(
+                    white_pixels,
+                    key=lambda p: abs(p[1] - green_y)
+                )
 
-            # Velocity-based green offset
+            # --- VELOCITY ---
             if self.vars["release_method"].get() == "Velocity-based":
                 if prev_white_y is not None:
                     dy = white_y - prev_white_y
                     green_offset = abs(dy)
+
                 prev_white_y = white_y
-                green_y_adjusted = green_y_adjusted + green_offset
-                green_y_canvas2  = int((green_y_adjusted / shake_height) * 60)
+                green_y += green_offset
 
-            # Draw overlay (canvas_offset=0 since the scaled positions are already relative to canvas origin)
+            # --- OVERLAY ---
             if self.vars["fish_overlay"].get() == "Enabled":
-                if self.vars["release_method"].get() == "Velocity-based":
-                    self.after(0, lambda y=green_y_canvas, top=0: self.fish_overlay.draw(bar_center=y, box_size=15, color="blue", canvas_offset=top))
-                self.after(0, lambda y=green_y_canvas2, top=0: self.fish_overlay.draw(bar_center=y, box_size=15, color="green", canvas_offset=top))
-                self.after(0, lambda _fx=white_y_canvas, _fl=0: self.fish_overlay.draw(bar_center=_fx, box_size=30, color="white", canvas_offset=_fl))
+                gy_canvas = int((green_y / shake_height) * 60)
+                wy_canvas = int((white_y / shake_height) * 60)
 
-            # --- Release condition: white X aligns with green X on the same Y ---
-            # Distance is now measured on X axis since both pixels share the same Y row
-            distance = abs(green_x - white_x)
-            if distance < perfect_threshold:
+                self.after(0, lambda y=gy_canvas: self.fish_overlay.draw(
+                    bar_center=y, box_size=15, color="green", canvas_offset=0
+                ))
+
+                self.after(0, lambda y=wy_canvas: self.fish_overlay.draw(
+                    bar_center=y, box_size=30, color="white", canvas_offset=0
+                ))
+
+            # --- RELEASE CONDITION (V2 STYLE) ---
+            distance = abs(green_y - white_y)
+
+            if distance < perfect_thresh:
                 time.sleep(release_delay)
-                _cast_stop.set()
-                mouse_controller.release(Button.left)
-                return
+                break
 
             if time.time() - start_time > max_time:
-                _cast_stop.set()
-                mouse_controller.release(Button.left)
-                return
-        # Cast loop exited because macro was stopped externally
+                break
+
+        # --- CLEANUP ---
         _cast_stop.set()
         mouse_controller.release(Button.left)
     def _execute_shake_click(self):
