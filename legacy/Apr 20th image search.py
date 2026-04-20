@@ -26,9 +26,6 @@ import numpy as np
 import mss
 # Webbrowser for opening links
 import webbrowser
-# Utilities
-import requests
-import io
 # Ctypes/Quartz for special click types
 if sys.platform == "win32":
     import ctypes # Windows
@@ -38,7 +35,7 @@ if sys.platform == "win32":
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 elif sys.platform == "darwin":
-    # import Quartz # If you're on macOS remove the first hashtag
+    import Quartz # If you're on macOS remove the first hashtag
     def _move_mouse(x, y):
         point = Quartz.CGPointMake(float(x), float(y))
         Quartz.CGWarpMouseCursorPosition(point)
@@ -1221,7 +1218,6 @@ class App(CTk):
     def load_settings(self, name="default"):
         """Load settings from a JSON config file."""
         path = os.path.join(USER_CONFIG_DIR, name, "config.json")
-        rod_folder = os.path.join(USER_CONFIG_DIR, name.replace(".json", ""))
         
         if not os.path.exists(path):
             self.set_status(f"Config not found: {name}")
@@ -1275,17 +1271,6 @@ class App(CTk):
                         switch.deselect()
         except Exception as e:
             print(f"Error loading switches: {e}")
-
-        # Load templates for image search
-        left_bar_path  = os.path.join(rod_folder, "left_bar.png")
-        right_bar_path = os.path.join(rod_folder, "right_bar.png")
-        fish_path      = os.path.join(rod_folder, "fish.png")
-
-        self.templates = {
-            "left_bar":  cv2.imread(left_bar_path, 0)  if os.path.exists(left_bar_path)  else None,
-            "right_bar": cv2.imread(right_bar_path, 0) if os.path.exists(right_bar_path) else None,
-            "fish":      cv2.imread(fish_path, 0)      if os.path.exists(fish_path)      else None,
-        }
 
         # Save misc settings and show status
         self.load_misc_settings()
@@ -1577,102 +1562,6 @@ class App(CTk):
 
                     if i < click_count - 1:
                         time.sleep(0.03)
-    # Logging-related functions
-    def _discord_text_worker(self, webhook_url, message_prefix, loop_count, show_status):
-        """Worker function to send text webhook."""
-        discord_webhook_name = self.vars["discord_webhook_name"].get()
-        try:
-            if show_status == True:
-                payload = {
-                    'content': f'{message_prefix}🎣 Cycle completed\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
-                    'username': discord_webhook_name,
-                    'embeds': [{
-                        'description': f'Completed loop #{loop_count}',
-                        'color': 0x5865F2,
-                        'timestamp': time.strftime("%Y-%m-%dT%H:%M:%S")
-                    }]
-                }
-            else:
-                payload = {
-                    'content': f'{message_prefix}🎣 Cycle failed\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
-                    'username': discord_webhook_name,
-                    'embeds': [{
-                        'description': f'Completed loop #{loop_count}',
-                        'color': 0x5865F2,
-                        'timestamp': time.strftime("%Y-%m-%dT%H:%M:%S")
-                    }]
-                }
-            response = requests.post(webhook_url, json=payload, timeout=10)
-            if response.status_code == 200 or response.status_code == 204:
-                if show_status == True:
-                    self.set_status(f"Discord text sent (Loop #{loop_count})")
-            else:
-                self.set_status(f"Error: Discord text failed: {response.status_code}")
-        except Exception as e:
-            self.set_status(f"Error sending Discord text: {e}")
-    def _discord_screenshot_worker(self, webhook_url, message_prefix, loop_count, show_status):
-        discord_webhook_name = self.vars["discord_webhook_name"].get()
-        try:
-            with mss.mss() as sct:
-                monitor = sct.monitors[1]
-                screenshot = np.array(sct.grab(monitor))
-
-            screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2BGR)
-
-            _, buffer = cv2.imencode(".png", screenshot)
-            img_byte_arr = io.BytesIO(buffer.tobytes())
-
-            files = {'file': ('screenshot.png', img_byte_arr, 'image/png')}
-            if show_status == True:
-                payload = {
-                    'content': f'{message_prefix}🎣 **Cycle completed**\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
-                    'username': discord_webhook_name
-                }
-            else:
-                payload = {
-                    'content': f'{message_prefix}🎣 **Cycle failed**\n🔄 {loop_count}\n🕐 {time.strftime("%Y-%m-%d %H:%M:%S")}',
-                    'username': discord_webhook_name
-                }
-            response = requests.post(webhook_url, data=payload, files=files, timeout=10)
-
-            if response.status_code in (200, 204):
-                if show_status == True:
-                    self.set_status(f"Discord screenshot sent (Loop #{loop_count})")
-            else:
-                self.set_status(f"Error: Discord screenshot failed: {response.status_code}")
-
-        except Exception as e:
-            self.set_status(f"Error: sending Discord screenshot: {e}")
-    def test_discord_webhook(self):
-        self.send_discord_webhook("**Discord Webhook is working**", "TEST", show_status=True)
-    def send_discord_webhook(self, text, loop_count, show_status=True):
-        if self.vars["discord_webhook_mode"].get() == "Disabled":
-            self.set_status("⚠ Discord webhook is disabled.")
-            return
-        # discord_webhook_url
-        webhook_url = self.vars["discord_webhook_url"].get().strip()
-
-        if not webhook_url.startswith("https://discord.com/api/webhooks/"):
-            self.set_status("Error: Invalid webhook URL.")
-            return
-
-        self.set_status("Sending test webhook...")
-
-        use_screenshot = self.vars.get("discord_screenshot") and self.vars["discord_screenshot"].get() == "on"
-
-        if use_screenshot:
-            thread = threading.Thread(
-                target=self._discord_screenshot_worker,
-                args=(webhook_url, f"{text}\n", loop_count, show_status),
-                daemon=True
-            )
-        else:
-            thread = threading.Thread(
-                target=self._discord_text_worker,
-                args=(webhook_url, f"{text}\n", loop_count, show_status),
-                daemon=True
-            )
-        thread.start()
     # Take debug screenshot
     def _take_debug_screenshot(self):
         """
@@ -1843,29 +1732,7 @@ class App(CTk):
 
         threading.Thread(target=_loop, daemon=True).start()
         return stop_event
-    # Pixel and image search
-    def _find_template(self, frame, template, confidence=0.7):
-        if template is None or frame is None:
-            return None
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        result = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
-        _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        if max_val >= confidence:
-            h, w = template.shape
-            return max_loc[0] + w // 2   # X relative to frame
-        return None
-    def _prepare_templates(self):
-        """Convert templates to grayscale once."""
-        for key in self.templates:
-            if self.templates[key] is None:
-                continue
-
-            if len(self.templates[key].shape) == 3:
-                self.templates[key] = cv2.cvtColor(
-                    self.templates[key],
-                    cv2.COLOR_BGR2GRAY
-                )
+    # Pixel search
     def _find_first_pixel(self, frame, hex, tolerance=8):
         tolerance = int(np.clip(tolerance, 0, 255))
         b, g, r = self._hex_to_bgr(hex)
@@ -2137,23 +2004,6 @@ class App(CTk):
 
         return box_center, self.last_left_x, self.last_right_x
     # Do pixel/image search
-    def _do_image_search(self, img, img_h):
-        fish_template = self.templates["fish"]
-        left_template  = self.templates["left_bar"]
-        right_template = self.templates["right_bar"]
-
-        fish_template_h = fish_template.shape[0]
-        bar_template_h  = left_template.shape[0]
-
-        # ---- Fish region (remove bottom bar part) ----
-        fish_region = img[:img_h - bar_template_h - 10, :]
-        fish_x = self._find_template(fish_region, fish_template, 0.8)
-
-        # ---- Bar region (remove top fish part) ----
-        bar_region = img[fish_template_h + 10:, :]
-        left_x = self._find_template(bar_region, left_template, 0.8)
-        right_x = self._find_template(bar_region, right_template, 0.8)
-        return fish_x, left_x, right_x
     def _do_pixel_search(self, img):
         fish_hex = self.vars["fish_color"].get()
         left_bar_hex = self.vars["left_color"].get()
@@ -2913,14 +2763,14 @@ class App(CTk):
         def hold_mouse():
             nonlocal mouse_down
             if not mouse_down:
-                mouse_controller.press(Button.left)
-                # keyboard_controller.press(Key.space)
+                # mouse_controller.press(Button.left)
+                keyboard_controller.press(Key.space)
                 mouse_down = True
         def release_mouse():
             nonlocal mouse_down
             if mouse_down:
-                mouse_controller.release(Button.left)
-                # keyboard_controller.release(Key.space)
+                # mouse_controller.release(Button.left)
+                keyboard_controller.release(Key.space)
                 mouse_down = False
         # Start screen capture thread
         self._cap_frame = None
@@ -2932,347 +2782,315 @@ class App(CTk):
             args=(_minigame_stop, float(self.vars["minigame_scan_delay"].get() or 0.05)),
             daemon=True
         ).start()
-        # Prepare templates for image search
-        try:
-            for key in ["fish", "left_bar", "right_bar"]:
-                template = self.templates.get(key)
-
-                if template is None:
-                    continue
-
-                # Convert to grayscale once
-                if len(template.shape) == 3:
-                    template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-        except Exception as e:
-            if not self.macro_running:
-                return
-            self.macro_running = False
-            self._reset_pid_state()
-            self.after(0, self.deiconify)  # show window safely
-            self.set_status(f"Macro crashed during minigame startup: {e}")
-            print(f"Macro crashed during minigame startup: {e}")
         while self.macro_running: # Main macro loop
-            try:
-                # Grab full screen then crop
-                if not self._cap_event.wait(timeout=0.5):
-                    continue
+            # Grab full screen then crop
+            if not self._cap_event.wait(timeout=0.5):
+                continue
 
-                with self._cap_lock:
-                    frame = self._cap_frame
-                    self._cap_event.clear()
+            with self._cap_lock:
+                frame = self._cap_frame
+                self._cap_event.clear()
 
-                if frame is None:
-                    _minigame_stop.set()
-                    return
+            if frame is None:
+                _minigame_stop.set()
+                return
 
-                img = frame[fish_top_s:fish_bottom_s, fish_left_s:fish_right_s]
-                note_img = frame[shake_top_s:shake_bottom_s, shake_left_s:shake_right_s]
-                friend_img = frame[friend_top_s:friend_bottom_s, friend_left_s:friend_right_s]
-                # Stabilize frame
-                deadzone_action = deadzone_action + 1
-                if deadzone_action == 2:
-                    deadzone_action = 0
-                # Do pixel and image search
-                # Image search will be added in the future, for now this is just a wrapper
-                # around the pixel search with some extra logic for clicking and resetting PID state when bars are lost
-                if True:
-                    img_h = img.shape[0]
-                    fish_x, left_x, right_x = self._do_image_search(img, img_h)
+            img = frame[fish_top_s:fish_bottom_s, fish_left_s:fish_right_s]
+            note_img = frame[shake_top_s:shake_bottom_s, shake_left_s:shake_right_s]
+            friend_img = frame[friend_top_s:friend_bottom_s, friend_left_s:friend_right_s]
+            # Stabilize frame
+            deadzone_action = deadzone_action + 1
+            if deadzone_action == 2:
+                deadzone_action = 0
+            # Do pixel and image search
+            # Image search will be added in the future, for now this is just a wrapper
+            # around the pixel search with some extra logic for clicking and resetting PID state when bars are lost
+            fish_x, left_x, right_x = self._do_pixel_search(img)
+            arrow_center = self._find_color_center(img, arrow_hex, arrow_tol)
+            if track_notes == "on":
+                note_box_pos = self._find_color_center(note_img, note_box_hex, note_box_tol)
+            else:
+                note_box_pos = None
+            # Convert fish X from tuple to int
+            if fish_x is None:
+                pass
+            elif isinstance(fish_x, (list, tuple)):
+                fish_x = fish_x[0] + fish_left
+            else:
+                fish_x = fish_x + fish_left
+            # Fish restart and clear overlay logic with multiple restart methods and PID reset when bars are lost
+            self.fish_overlay.clear()
+            if restart_method == "Friend Area": # Not implemented yet (this is a stub)
+                friend_x = self._find_color_center(friend_img, "#9bff9b", 2)
+                if fish_x is not None:
+                    self.last_fish_x = fish_x
+                if left_x is not None and right_x is not None:
+                    self.last_bar_left = left_x
+                    self.last_bar_right = right_x
                 else:
-                    fish_x, left_x, right_x = self._do_pixel_search(img)
-                arrow_center = self._find_color_center(img, arrow_hex, arrow_tol)
-                if track_notes == "on":
-                    note_box_pos = self._find_color_center(note_img, note_box_hex, note_box_tol)
-                else:
-                    note_box_pos = None
-                # Convert fish X from tuple to int
-                if fish_x is None:
-                    pass
-                elif isinstance(fish_x, (list, tuple)):
-                    fish_x = fish_x[0] + fish_left
-                else:
-                    fish_x = fish_x + fish_left
-                # Fish restart and clear overlay logic with multiple restart methods and PID reset when bars are lost
-                self.fish_overlay.clear()
-                if restart_method == "Friend Area": # Not implemented yet (this is a stub)
-                    friend_x = self._find_color_center(friend_img, "#9bff9b", 2)
-                    if fish_x is not None:
-                        self.last_fish_x = fish_x
-                    if left_x is not None and right_x is not None:
-                        self.last_bar_left = left_x
-                        self.last_bar_right = right_x
-                    else:
-                        if friend_x is not None:
-                            release_mouse()
-                            time.sleep(restart_delay)
-                            return
-                        else:
-                            fish_x = self.last_fish_x
-                            if left_x is not None and right_x is not None:
-                                left_x = self.last_bar_left
-                                right_x = self.last_bar_right
-                elif restart_method == "Fish + Bar":
-                    if fish_x is not None:
-                        self.last_fish_x = fish_x
-                    else:
-                        if left_x is None and right_x is None:
-                            release_mouse()
-                            time.sleep(restart_delay)
-                            return
-                        else:
-                            fish_x = self.last_fish_x
-                else:
-                    if fish_x is not None:
-                        self.last_fish_x = fish_x
-                    else:
+                    if friend_x is not None:
                         release_mouse()
                         time.sleep(restart_delay)
                         return
-                # Compute bar variables for calculations
-                bars_found = left_x is not None and right_x is not None
-                if bars_found == True:
-                    bar_size = right_x - left_x # Don't add fish left here
-                    bar_center = (left_x + bar_size // 2) + fish_left # ADD FISH LEFT HERE
-                    left_deadzone = bar_size * left_ratio
-                    right_deadzone = bar_size * right_ratio
-                    max_left = fish_left + left_deadzone
-                    max_right = fish_right - right_deadzone
-                    # Compute charge values (only if charge is on to prevent CPU spikes)
-                    if track_charges == "on" and bars_found:
-                        charge_half_size = bar_size * 0.4
-                        charge_left = bar_center - charge_half_size
-                        charge_right = bar_center + charge_half_size
-                        charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
-                        charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                        charge_left_s   = int(charge_left * scale)
-                        charge_right_s  = int(charge_right * scale)
-                        charge_top_s    = int(charge_top * scale)
-                        charge_bottom_s = int(charge_bottom * scale)
-
-                        charge_img = frame[
-                            charge_top_s:charge_bottom_s,
-                            charge_left_s:charge_right_s
-                        ]
-                        charge_half_size = bar_size * 0.4
-                        charge_left = bar_center - charge_half_size
-                        charge_right = bar_center + charge_half_size
-                        charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
-                        charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                        charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
-                        charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
+                    else:
+                        fish_x = self.last_fish_x
+                        if left_x is not None and right_x is not None:
+                            left_x = self.last_bar_left
+                            right_x = self.last_bar_right
+            elif restart_method == "Fish + Bar":
+                if fish_x is not None:
+                    self.last_fish_x = fish_x
                 else:
-                    bar_size = None
-                    bar_center = None
-                # Main minigame loop
-                if bars_found and bar_center is not None: # Bar found
-                    # Track notes
-                    # note tracking logic
-                    if note_box_pos is not None:
-                        ## Step 1: Convert note to screen coordinates
-                        shake_width = shake_right - shake_left
-                        fish_width = fish_right - fish_left
-                        note_screen_x = int((note_box_pos[0] / shake_width) * fish_width) + fish_left
-                        note_screen_y = note_box_pos[1] - shake_top
-                        note_screen_y_ratio = note_screen_y / (shake_bottom - shake_top)
-                    else:
-                        note_screen_x = None
-                    if note_box_pos is not None and track_notes == "on":
-                        if note_screen_y_ratio >= note_track_ratio:
-                            fish_x = note_screen_x
-                    elif track_notes == "off":
-                        pass
-                    # Compute bar left and bar right (screen coords)
-                    bar_left_screen  = left_x  + fish_left
-                    bar_right_screen = right_x + fish_left
-                    # Check max left and max right
-                    if max_left is not None and fish_x <= max_left: # Max left and right check (inside bar)
-                        controller_mode = 3
-                    elif max_right is not None and fish_x >= max_right:
-                        controller_mode = 2
-                    else:
-                        if bar_left_screen <= fish_x <= bar_right_screen:
-                            if track_charges == "on":
-                                controller_mode = 4
-                            else:
-                                controller_mode = 0
-                        else:
-                            controller_mode = 1
-                elif arrow_center:
-                    # Find arrow indicator
-                    arrow_indicator_x = self._find_arrow_indicator_x(img, arrow_hex, arrow_tol, mouse_down)
-                    # Indicator failsafe
-                    if arrow_indicator_x is None:
-                        controller_mode = 3
+                    if left_x is None and right_x is None:
+                        release_mouse()
+                        time.sleep(restart_delay)
                         return
-                    # Capture width and estimate bar center
-                    capture_width = fish_right - fish_left
-                    estimated_bar_center, estimated_left, estimated_right = self._update_arrow_box_estimation(arrow_indicator_x, mouse_down, capture_width)
-                    # Now use estimated bar to control
-                    if estimated_bar_center is not None:
-                        bar_center = int(estimated_bar_center + fish_left)
-                        bar_left_screen  = estimated_left  + fish_left
-                        bar_right_screen = estimated_right + fish_left
-                        bar_size = bar_right_screen - bar_left_screen
-                        if bar_left_screen <= fish_x <= bar_right_screen:
-                            if track_charges == "on":
-                                controller_mode = 4
-                            else:
-                                controller_mode = 0
-                        else:
-                            controller_mode = 1
                     else:
-                        controller_mode = 3
-                # Check if outside bar to use simple tracking instead
-                if track_charges == "on" and bar_left_screen <= fish_x <= bar_right_screen:
-                    controller_mode = 4
-                elif controller_mode == 0:
-                    if not bar_left_screen <= fish_x <= bar_right_screen:
-                        controller_mode = 1
-                # Draw boxes
-                if self.vars["fish_overlay"].get() == "on":
-                    self.after(0, lambda: self.fish_overlay.draw(bar_center=bar_center,box_size=(bar_right_screen - bar_left_screen),color="pink",canvas_offset=fish_left))
-                    self.after(0, lambda _bc=bar_center, _bs=bar_size, _fl=fish_left: self.fish_overlay.draw(bar_center=_bc, box_size=_bs, color="green", canvas_offset=_fl, show_bar_center=True))
-                    self.after(0, lambda _ml=max_left, _fl=fish_left: self.fish_overlay.draw(bar_center=_ml, box_size=15, color="lightblue", canvas_offset=_fl))
-                    self.after(0, lambda _mr=max_right, _fl=fish_left: self.fish_overlay.draw(bar_center=_mr, box_size=15, color="lightblue", canvas_offset=_fl))
-                    self.after(0, lambda: self.fish_overlay.draw(bar_center=fish_x, box_size=10, color="red", canvas_offset=fish_left))
-                # PID loop
-                if controller_mode == 0 and bar_center is not None:
-                    error = fish_x - bar_center
-                    control = self._pid_control_strict(error, bar_center)
-                    # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
-                    control = max((0 - pid_clamp), min(pid_clamp, control))
-                    # Stabilize Deadzone Checker
-                    if control > thresh:
-                        hold_mouse()
-                    elif control < -thresh:
-                        release_mouse()
-                    else:
-                        if deadzone_action == 1:
-                            hold_mouse()
-                        else:
-                            release_mouse()
-                elif controller_mode == 1 and bar_center is not None: # Simple tracking
-                    control = fish_x - bar_center
-                    # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
-                    control = max((0 - pid_clamp), min(pid_clamp, control))
-                    # Stabilize Deadzone Checker
-                    if control > thresh:
-                        hold_mouse()
-                    elif control < -thresh:
-                        release_mouse()
-                    else:
-                        if deadzone_action == 1:
-                            hold_mouse()
-                        else:
-                            release_mouse()
-                elif controller_mode == 2:
-                    hold_mouse()
-                elif controller_mode == 3:
+                        fish_x = self.last_fish_x
+            else:
+                if fish_x is not None:
+                    self.last_fish_x = fish_x
+                else:
                     release_mouse()
-                elif controller_mode == 4:
-                    now = time.time()
+                    time.sleep(restart_delay)
+                    return
+            # Compute bar variables for calculations
+            bars_found = left_x is not None and right_x is not None
+            if bars_found == True:
+                bar_size = right_x - left_x # Don't add fish left here
+                bar_center = (left_x + bar_size // 2) + fish_left # ADD FISH LEFT HERE
+                left_deadzone = bar_size * left_ratio
+                right_deadzone = bar_size * right_ratio
+                max_left = fish_left + left_deadzone
+                max_right = fish_right - right_deadzone
+                # Compute charge values (only if charge is on to prevent CPU spikes)
+                if track_charges == "on" and bars_found:
+                    charge_half_size = bar_size * 0.4
+                    charge_left = bar_center - charge_half_size
+                    charge_right = bar_center + charge_half_size
+                    charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
+                    charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
+                    charge_left_s   = int(charge_left * scale)
+                    charge_right_s  = int(charge_right * scale)
+                    charge_top_s    = int(charge_top * scale)
+                    charge_bottom_s = int(charge_bottom * scale)
 
-                    # Cooldown
-                    if now < charge_cooldown_until:
+                    charge_img = frame[
+                        charge_top_s:charge_bottom_s,
+                        charge_left_s:charge_right_s
+                    ]
+                    charge_half_size = bar_size * 0.4
+                    charge_left = bar_center - charge_half_size
+                    charge_right = bar_center + charge_half_size
+                    charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
+                    charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
+                    charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
+                    charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
+            else:
+                bar_size = None
+                bar_center = None
+            # Main minigame loop
+            if bars_found and bar_center is not None: # Bar found
+                # Track notes
+                # note tracking logic
+                if note_box_pos is not None:
+                    ## Step 1: Convert note to screen coordinates
+                    shake_width = shake_right - shake_left
+                    fish_width = fish_right - fish_left
+                    note_screen_x = int((note_box_pos[0] / shake_width) * fish_width) + fish_left
+                    note_screen_y = note_box_pos[1] - shake_top
+                    note_screen_y_ratio = note_screen_y / (shake_bottom - shake_top)
+                else:
+                    note_screen_x = None
+                if note_box_pos is not None and track_notes == "on":
+                    if note_screen_y_ratio >= note_track_ratio:
+                        fish_x = note_screen_x
+                elif track_notes == "off":
+                    pass
+                # Compute bar left and bar right (screen coords)
+                bar_left_screen  = left_x  + fish_left
+                bar_right_screen = right_x + fish_left
+                # Check max left and max right
+                if max_left is not None and fish_x <= max_left: # Max left and right check (inside bar)
+                    controller_mode = 3
+                elif max_right is not None and fish_x >= max_right:
+                    controller_mode = 2
+                else:
+                    if bar_left_screen <= fish_x <= bar_right_screen:
+                        if track_charges == "on":
+                            controller_mode = 4
+                        else:
+                            controller_mode = 0
+                    else:
+                        controller_mode = 1
+            elif arrow_center:
+                # Find arrow indicator
+                arrow_indicator_x = self._find_arrow_indicator_x(img, arrow_hex, arrow_tol, mouse_down)
+                # Indicator failsafe
+                if arrow_indicator_x is None:
+                    controller_mode = 3
+                    return
+                # Capture width and estimate bar center
+                capture_width = fish_right - fish_left
+                estimated_bar_center, estimated_left, estimated_right = self._update_arrow_box_estimation(arrow_indicator_x, mouse_down, capture_width)
+                # Now use estimated bar to control
+                if estimated_bar_center is not None:
+                    bar_center = int(estimated_bar_center + fish_left)
+                    bar_left_screen  = estimated_left  + fish_left
+                    bar_right_screen = estimated_right + fish_left
+                    bar_size = bar_right_screen - bar_left_screen
+                    if bar_left_screen <= fish_x <= bar_right_screen:
+                        if track_charges == "on":
+                            controller_mode = 4
+                        else:
+                            controller_mode = 0
+                    else:
+                        controller_mode = 1
+                else:
+                    controller_mode = 3
+            # Check if outside bar to use simple tracking instead
+            if track_charges == "on" and bar_left_screen <= fish_x <= bar_right_screen:
+                controller_mode = 4
+            elif controller_mode == 0:
+                if not bar_left_screen <= fish_x <= bar_right_screen:
+                    controller_mode = 1
+            # Draw boxes
+            if self.vars["fish_overlay"].get() == "on":
+                self.after(0, lambda: self.fish_overlay.draw(bar_center=bar_center,box_size=(bar_right_screen - bar_left_screen),color="pink",canvas_offset=fish_left))
+                self.after(0, lambda _bc=bar_center, _bs=bar_size, _fl=fish_left: self.fish_overlay.draw(bar_center=_bc, box_size=_bs, color="green", canvas_offset=_fl, show_bar_center=True))
+                self.after(0, lambda _ml=max_left, _fl=fish_left: self.fish_overlay.draw(bar_center=_ml, box_size=15, color="lightblue", canvas_offset=_fl))
+                self.after(0, lambda _mr=max_right, _fl=fish_left: self.fish_overlay.draw(bar_center=_mr, box_size=15, color="lightblue", canvas_offset=_fl))
+                self.after(0, lambda: self.fish_overlay.draw(bar_center=fish_x, box_size=10, color="red", canvas_offset=fish_left))
+            # PID loop
+            if controller_mode == 0 and bar_center is not None:
+                error = fish_x - bar_center
+                control = self._pid_control_strict(error, bar_center)
+                # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
+                control = max((0 - pid_clamp), min(pid_clamp, control))
+                # Stabilize Deadzone Checker
+                if control > thresh:
+                    hold_mouse()
+                elif control < -thresh:
+                    release_mouse()
+                else:
+                    if deadzone_action == 1:
+                        hold_mouse()
+                    else:
                         release_mouse()
-                        should_hold = False
-                        continue
-
-                    # Stabilize charge detection (keep existing detection logic)
-                    if charge_size2 is not None and charge_size2 > 0:
-                        last_charge_size = charge_size2
-                        charge_lost_frames = 0
+            elif controller_mode == 1 and bar_center is not None: # Simple tracking
+                control = fish_x - bar_center
+                # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
+                control = max((0 - pid_clamp), min(pid_clamp, control))
+                # Stabilize Deadzone Checker
+                if control > thresh:
+                    hold_mouse()
+                elif control < -thresh:
+                    release_mouse()
+                else:
+                    if deadzone_action == 1:
+                        hold_mouse()
                     else:
-                        charge_lost_frames += 1
+                        release_mouse()
+            elif controller_mode == 2:
+                hold_mouse()
+            elif controller_mode == 3:
+                release_mouse()
+            elif controller_mode == 4:
+                now = time.time()
 
-                    if charge_lost_frames < 3:
-                        effective_charge = last_charge_size
-                    else:
-                        effective_charge = 0
-
-                    # Maelstrom-style logic: colors detected if effective_charge > 0
-                    colors_detected = effective_charge > 0
-
-                    # Calculate bar sections
-                    charge_size = bar_right_screen - bar_left_screen
-                    left_threshold = bar_left_screen + (charge_size * maelstrom_left_section)
-                    right_threshold = bar_left_screen + (charge_size * maelstrom_right_section)
-
-                    # Determine icon position sections
-                    in_left_section = fish_x < left_threshold
-                    in_middle_section = left_threshold <= fish_x <= right_threshold
-                    in_right_section = fish_x > right_threshold
-
-                    # Edge detection (similar to IRUS)
-                    edge_threshold = charge_size * left_ratio
-                    target_at_left_edge = fish_x < (fish_left + edge_threshold)
-                    target_at_right_edge = fish_x > (fish_right - edge_threshold)
-
+                # Cooldown
+                if now < charge_cooldown_until:
+                    release_mouse()
                     should_hold = False
+                    continue
 
-                    if colors_detected:
-                        # Colors detected - clear the missing flag
-                        colors_were_missing = False
+                # Stabilize charge detection (keep existing detection logic)
+                if charge_size2 is not None and charge_size2 > 0:
+                    last_charge_size = charge_size2
+                    charge_lost_frames = 0
+                else:
+                    charge_lost_frames += 1
 
-                        # State machine logic similar to IRUS Neural
-                        if target_at_right_edge:
-                            # Icon at right edge of screen - spam minigame
+                if charge_lost_frames < 3:
+                    effective_charge = last_charge_size
+                else:
+                    effective_charge = 0
+
+                # Maelstrom-style logic: colors detected if effective_charge > 0
+                colors_detected = effective_charge > 0
+
+                # Calculate bar sections
+                charge_size = bar_right_screen - bar_left_screen
+                left_threshold = bar_left_screen + (charge_size * maelstrom_left_section)
+                right_threshold = bar_left_screen + (charge_size * maelstrom_right_section)
+
+                # Determine icon position sections
+                in_left_section = fish_x < left_threshold
+                in_middle_section = left_threshold <= fish_x <= right_threshold
+                in_right_section = fish_x > right_threshold
+
+                # Edge detection (similar to IRUS)
+                edge_threshold = charge_size * left_ratio
+                target_at_left_edge = fish_x < (fish_left + edge_threshold)
+                target_at_right_edge = fish_x > (fish_right - edge_threshold)
+
+                should_hold = False
+
+                if colors_detected:
+                    # Colors detected - clear the missing flag
+                    colors_were_missing = False
+
+                    # State machine logic similar to IRUS Neural
+                    if target_at_right_edge:
+                        # Icon at right edge of screen - spam minigame
+                        maelstrom_state = "minigame"
+                        should_hold = not colors_were_missing
+                    else:
+                        # Middle zone - state machine based on bar sections
+                        if in_left_section:
+                            # Left section: Enter "moving_to_right" state - release until we reach right section
+                            maelstrom_state = "moving_to_right"
+                            should_hold = False
+                        elif in_right_section:
+                            # Right section: Always play minigame
                             maelstrom_state = "minigame"
                             should_hold = not colors_were_missing
-                        else:
-                            # Middle zone - state machine based on bar sections
-                            if in_left_section:
-                                # Left section: Enter "moving_to_right" state - release until we reach right section
-                                maelstrom_state = "moving_to_right"
+                        else:  # in_middle_section
+                            # Middle section: Depends on state
+                            if maelstrom_state == "moving_to_right":
+                                # Coming from left - keep releasing until we reach right section
                                 should_hold = False
-                            elif in_right_section:
-                                # Right section: Always play minigame
+                            else:
+                                # Already in minigame state - play the minigame
                                 maelstrom_state = "minigame"
                                 should_hold = not colors_were_missing
-                            else:  # in_middle_section
-                                # Middle section: Depends on state
-                                if maelstrom_state == "moving_to_right":
-                                    # Coming from left - keep releasing until we reach right section
-                                    should_hold = False
-                                else:
-                                    # Already in minigame state - play the minigame
-                                    maelstrom_state = "minigame"
-                                    should_hold = not colors_were_missing
-                    else:
-                        # Colors not detected - release and set flag
-                        colors_were_missing = True
-                        should_hold = False
+                else:
+                    # Colors not detected - release and set flag
+                    colors_were_missing = True
+                    should_hold = False
 
-                        # Override: force release if in left section
-                        if in_left_section:
-                            maelstrom_state = "moving_to_right"
+                    # Override: force release if in left section
+                    if in_left_section:
+                        maelstrom_state = "moving_to_right"
 
-                    # HARD STOP: release when fully charged
-                    effective_charge_ratio = effective_charge / bar_size if bar_size else 0
-                    if effective_charge_ratio >= 0.6:
-                        should_hold = False
-                        maelstrom_state = "cooldown"
-                        charge_cooldown_until = now + 0.2
+                # HARD STOP: release when fully charged
+                effective_charge_ratio = effective_charge / bar_size if bar_size else 0
+                if effective_charge_ratio >= 0.6:
+                    should_hold = False
+                    maelstrom_state = "cooldown"
+                    charge_cooldown_until = now + 0.2
 
-                    # Execute mouse control
-                    if should_hold:
-                        hold_mouse()
-                    else:
-                        release_mouse()
+                # Execute mouse control
+                if should_hold:
+                    hold_mouse()
+                else:
+                    release_mouse()
 
-                    # Overlay
-                    if charge_left2 is not None and charge_right2 is not None:
-                        charge_center = ((charge_left2 + charge_right2) // 2) + charge_left
-                        # print(f"Charge detected: {colors_detected}, State: {maelstrom_state}, Hold: {should_hold}")
-                time.sleep(0.01)
-            except Exception as e:
-                if not self.macro_running:
-                    return
-                self.macro_running = False
-                self._reset_pid_state()
-                self.after(0, self.deiconify)  # show window safely
-                self.set_status(f"Macro crashed during minigame loop: {e}")
-                print(f"Macro crashed during minigame loop: {e}")
+                # Overlay
+                if charge_left2 is not None and charge_right2 is not None:
+                    charge_center = ((charge_left2 + charge_right2) // 2) + charge_left
+                    # print(f"Charge detected: {colors_detected}, State: {maelstrom_state}, Hold: {should_hold}")
+            time.sleep(0.01)
     def stop_macro(self):
         if not self.macro_running:
             return
