@@ -17,6 +17,8 @@ import threading
 from pynput.keyboard import Listener as KeyListener, Key
 macro_running = False
 macro_thread = None
+# Key Inputs must be on seperate thread
+import threading
 # Time
 import time
 import json
@@ -312,7 +314,7 @@ class App(CTk):
         self.hotkey_start = Key.f5
         self.hotkey_stop = Key.f7
         self.hotkey_change_areas = Key.f6 # added for the bar area selector
-        self.hotkey_screenshot = Key.f8
+        self.hotkey_reserved = Key.f8
         self.hotkey_labels = {}  # Store label widgets for dynamic updates
 
         # Screen capture variables — MSS instances are per-thread (see _thread_local)
@@ -551,11 +553,11 @@ class App(CTk):
         CTkLabel(automation, text="Automation Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         # Create and store checkboxes with StringVar
         auto_rod_var = StringVar(value="off")
-        self.vars["auto_refresh"] = auto_rod_var
+        self.vars["auto_select_rod"] = auto_rod_var
         auto_rod_cb = CTkCheckBox(automation, text="Auto Select Rod", variable=auto_rod_var, onvalue="on", offvalue="off")
         auto_rod_cb.grid(row=1, column=0, padx=12, pady=8, sticky="w")
         auto_zoom_var = StringVar(value="off")
-        self.vars["auto_zoom"] = auto_zoom_var
+        self.vars["auto_zoom_in"] = auto_zoom_var
         auto_zoom_cb = CTkCheckBox(automation, text="Auto Zoom In", variable=auto_zoom_var, onvalue="on", offvalue="off")
         auto_zoom_cb.grid(row=2, column=0, padx=12, pady=8, sticky="w")
         # Overlay Options 
@@ -593,10 +595,10 @@ class App(CTk):
         bag_delay_entry = CTkEntry(sequence_options, width=120, textvariable=bag_delay_var)
         bag_delay_entry.grid(row=2, column=1, padx=12, pady=8, sticky="w")
         CTkLabel(sequence_options, text="Delay before casting").grid( row=3, column=0, padx=12, pady=8, sticky="w")
-        delay_before_casting_var = StringVar(value="0.0")
-        self.vars["delay_before_casting"] = delay_before_casting_var
-        delay_before_casting_entry = CTkEntry(sequence_options, width=120, textvariable=delay_before_casting_var)
-        delay_before_casting_entry.grid(row=3, column=1, padx=12, pady=8, sticky="w")
+        casting_delay2_var = StringVar(value="0.0")
+        self.vars["casting_delay2"] = casting_delay2_var
+        casting_delay2_entry = CTkEntry(sequence_options, width=120, textvariable=casting_delay2_var)
+        casting_delay2_entry.grid(row=3, column=1, padx=12, pady=8, sticky="w")
         # Arrow Tracking Settings
         arrow_settings = CTkFrame(scroll, border_width=2)
         arrow_settings.grid(row=1, column=0, padx=20, pady=20, sticky="nw")
@@ -1273,7 +1275,7 @@ class App(CTk):
             # Save settings
             config_name = self.vars["active_config"].get()
             self.save_settings(config_name)
-            if self.vars["auto_zoom"].get() == "on" and self.vars["casting_mode"].get() == "Perfect":
+            if self.vars["auto_zoom_in"].get() == "on" and self.vars["casting_mode"].get() == "Perfect":
                 messagebox.showwarning("Error", "Auto Zoom In and Perfect Cast can't be enabled at once. \nDisable one of them to continue.")
             else:
                 self.macro_running = True
@@ -1563,7 +1565,7 @@ class App(CTk):
             )
         thread.start()
     # Pixel Search Functions
-    def _pixel_search(self, frame, target_color_hex, tolerance=8):
+    def _pixel_search(self, frame, target_color_hex, tolerance=10):
         """
         Search for a specific color in a frame and return all matching pixel coordinates.
         
@@ -1660,7 +1662,7 @@ class App(CTk):
         return np.frombuffer(img.raw, dtype=np.uint8).reshape(height, width, 4)[:, :, :3]
 
         
-    def _find_color_center(self, frame, target_color_hex, tolerance=8):
+    def _find_color_center(self, frame, target_color_hex, tolerance=10):
         """
         Find the center point of a color cluster in a frame.
         Using vectorized detection.
@@ -1787,7 +1789,7 @@ class App(CTk):
 
         return left_edge, right_edge
     
-    def _find_color_bounds(self, frame, target_color_hex, tolerance=8):
+    def _find_color_bounds(self, frame, target_color_hex, tolerance=10):
         pixels = self._pixel_search(frame, target_color_hex, tolerance)
         if not pixels:
             return None
@@ -1808,7 +1810,7 @@ class App(CTk):
             "center_y": (min_y + max_y) / 2
         }
 
-    def _find_first_pixel(self, frame, hex, tolerance=8):
+    def _find_shake_pixel(self, frame, hex, tolerance=10):
         tolerance = int(np.clip(tolerance, 0, 255))
         b, g, r = self._hex_to_bgr(hex)
         white = np.array([b, g, r], dtype=np.int16)
@@ -2166,7 +2168,7 @@ class App(CTk):
         self._reset_pid_state()
         self.set_status("Macro Status: Running")
 
-        if self.vars["auto_zoom"].get() == "on":
+        if self.vars["auto_zoom_in"].get() == "on":
             for _ in range(20):
                 mouse_controller.scroll(0, 1)
                 time.sleep(0.05)
@@ -2188,7 +2190,7 @@ class App(CTk):
                self.execute_totem(cycle, shake_x, shake_y)
 
             # 1. Select rod
-            if self.vars["auto_refresh"].get() == "on":
+            if self.vars["auto_select_rod"].get() == "on":
                 bag_delay = float(self.vars["bag_delay"].get())
                 self.set_status("Selecting rod")
                 # Rod and bag slots
@@ -2438,7 +2440,7 @@ class App(CTk):
             time.sleep(float(self.vars["cast_scan_delay"].get()))
     def _execute_cast_normal(self):
         """Hold left click for user cast delay"""
-        delay2 = float(self.vars["delay_before_casting"].get() or 0.0)
+        delay2 = float(self.vars["casting_delay2"].get() or 0.0)
         time.sleep(delay2)  # wait for cast to register in other games
         mouse_controller.press(Button.left)
         duration = float(self.vars["cast_duration"].get() or 0.6)
@@ -2495,7 +2497,7 @@ class App(CTk):
                 time.sleep(scan_delay)
                 continue
             # 2. Look for shake pixel
-            shake_pixel = self._find_first_pixel(shake_area, shake_hex, tolerance)
+            shake_pixel = self._find_shake_pixel(shake_area, shake_hex, tolerance)
             if shake_pixel:
                 x, y = shake_pixel
                 screen_x = shake_left + x

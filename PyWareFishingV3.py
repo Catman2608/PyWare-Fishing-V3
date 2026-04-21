@@ -1969,7 +1969,7 @@ class App(CTk):
         tolerance=15,
         tolerance2=15,
         scan_height_ratio=0.55
-    ):
+        ):
         if frame is None:
             return None, None
 
@@ -2030,7 +2030,7 @@ class App(CTk):
         tolerance=15,
         tolerance2=15,
         scan_height_ratio=0.55
-    ):
+        ):
         if frame is None:
             return None, None
 
