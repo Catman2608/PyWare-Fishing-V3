@@ -106,7 +106,7 @@ if sys.platform == "darwin":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 else:
     pass # You're on Windows, no need to change the working directory
-# triple Area Selector class
+# Area Selector class
 class TripleAreaSelector:
     HANDLE_SIZE = 8
     def __init__(self, parent, shake_area, fish_area, friend_area, callback):

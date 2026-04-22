@@ -78,7 +78,7 @@ else:
     USER_CONFIG_DIR = os.path.join(BASE_PATH, "configs")
 
 os.makedirs(USER_CONFIG_DIR, exist_ok=True)
-# triple Area Selector class
+# Area Selector class
 class TripleAreaSelector:
     HANDLE_SIZE = 8
     def __init__(self, parent, shake_area, fish_area, friend_area, callback):
@@ -1252,7 +1252,7 @@ class App(CTk):
     def set_status(self, text, key=None):
         self.status_label.configure(text=text)
     # Macro helper functions
-    # triple Area Selector
+    # Area Selector
     def open_triple_area_selector(self):
         self.update_idletasks()
         # Toggle OFF if already open

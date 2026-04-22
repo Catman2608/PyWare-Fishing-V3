@@ -58,7 +58,7 @@
     "pid_clamp": "100",
     "discord_webhook_mode": "Screenshot",
     "discord_webhook_cd": "Cycles",
-    "discord_webhook_url": "",
+    "discord_webhook_url": "https://discord.com/api/webhooks/1487457377841320026/okEC0eHxiYbBhd3NLmCVKclseXIQWBYfM0DAZunDmpdz_c3EQKJowvRuXTf9pTGrAyLe",
     "discord_webhook_name": "I Can't Fish",
     "discord_webhook_cycle": "3",
     "discord_webhook_time": "60",
