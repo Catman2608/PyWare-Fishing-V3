@@ -4991,8 +4991,6 @@ class Application(tk.Tk):
         self.last_indicator_x = indicator_centroid_x
         self.last_holding_state = self.is_holding_click
 
-
-
     def _process_and_control(self, sct_instance, time_delta, current_time):
         """
         The control loop executed by the background thread. Handles screen capture,

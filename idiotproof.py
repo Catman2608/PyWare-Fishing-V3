@@ -7457,12 +7457,12 @@ this software.
     def on_decline():
         close_dialog(False)
     
-    accept_button = ctk.CTkButton(button_frame, text="Accept", width=160, height=36, command=on_accept, 
+    accept_button = ctk.CTkButton(button_frame, text="Accept", width=120, height=36, command=on_accept, 
                                  fg_color="#4CAF50", hover_color="#45a049", 
                                  font=ctk.CTkFont(size=14, weight="bold"))
     accept_button.pack(side="left", padx=10)
     
-    decline_button = ctk.CTkButton(button_frame, text="Decline", width=160, height=36, command=on_decline,
+    decline_button = ctk.CTkButton(button_frame, text="Decline", width=120, height=36, command=on_decline,
                                   fg_color="#f44336", hover_color="#da190b",
                                   font=ctk.CTkFont(size=14, weight="bold"))
     decline_button.pack(side="left", padx=10)

@@ -641,11 +641,13 @@ class App(CTk):
         self.tabs.add("Basic")
         self.tabs.add("Automation")
         self.tabs.add("Utilities")
+        self.tabs.add("Advanced")
 
         # Build tabs
         self.build_basic_tab(self.tabs.tab("Basic"))
         self.build_automation_tab(self.tabs.tab("Automation"))
         self.build_utilities_tab(self.tabs.tab("Utilities"))
+        self.build_advanced_tab(self.tabs.tab("Advanced"))
 
         # Load last config and reapply hotkeys
         self.load_last_config()
@@ -690,7 +692,7 @@ class App(CTk):
 
         CTkButton(basic_settings, text="Open Base Folder", corner_radius=10, 
                   command=self.open_base_folder
-                  ).grid(row=2, column=0, padx=12, pady=12, sticky="w")
+                  ).grid(row=0, column=1, padx=12, pady=12, sticky="w")
 
         # Hotkey and Hotbar Settings
         hotkey_hotbar_settings = CTkFrame(scroll, border_width=2)
@@ -907,7 +909,7 @@ class App(CTk):
         # Normal Casting Group
         self.normal_casting = CTkFrame(scroll, border_width=2)
         self.normal_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
-        CTkLabel(self.normal_casting, text="Normal Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+        CTkLabel(self.normal_casting, text="Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(self.normal_casting, text="Delay").grid(row=1, column=0, padx=12, pady=8, sticky="w")
         delay_before_casting_var = StringVar(value="0.0")
         self.vars["delay_before_casting"] = delay_before_casting_var
@@ -927,43 +929,45 @@ class App(CTk):
         self.perfect_casting = CTkFrame(scroll, border_width=2)
         self.perfect_casting.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
 
-        CTkLabel(self.perfect_casting, text="Perfect Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
-        CTkLabel(self.perfect_casting, text="Perfect Cast Scan FPS:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Casting Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+
+        CTkLabel(self.perfect_casting, text="Release Method:").grid(row=1, column=0, padx=12, pady=10, sticky="w" )
+        release_method_var = StringVar(value="Simple")
+        self.vars["release_method"] = release_method_var
+        release_method_cb = CTkComboBox(self.perfect_casting, values=["Velocity-based", "Simple"], 
+                               variable=release_method_var, command=lambda v: self.set_status(f"Release Method: {v}")
+                               )
+        release_method_cb.grid(row=1, column=1, padx=12, pady=10, sticky="w")
+        self.comboboxes["release_method"] = release_method_cb
+
+        CTkLabel(self.perfect_casting, text="Scan FPS:").grid(row=1, column=2, padx=12, pady=10, sticky="w")
         cast_scan_delay_var = StringVar(value="0.05")
         self.vars["cast_scan_delay"] = cast_scan_delay_var
         cast_scan_delay_entry = CTkEntry(self.perfect_casting, width=120, textvariable=cast_scan_delay_var)
-        cast_scan_delay_entry.grid(row=1, column=1, padx=12, pady=10, sticky="w")
+        cast_scan_delay_entry.grid(row=1, column=3, padx=12, pady=10, sticky="w")
+
         CTkLabel(self.perfect_casting, text="Failsafe Release Timeout:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         perfect_max_time_var = StringVar(value="3.5")
         self.vars["perfect_max_time"] = perfect_max_time_var
         perfect_max_time_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_max_time_var)
         perfect_max_time_entry.grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(self.perfect_casting, text="Perfect Cast Release Method:").grid(row=3, column=0, padx=12, pady=10, sticky="w" )
-        release_method_var = StringVar(value="Simple")
-        self.vars["release_method"] = release_method_var
-        release_method_cb = CTkComboBox(self.perfect_casting, values=["Velocity-based", "Simple"], 
-                               variable=release_method_var, command=lambda v: self.set_status(f"Perfect Cast Release Method: {v}")
-                               )
-        release_method_cb.grid(row=3, column=1, padx=12, pady=10, sticky="w")
-        self.comboboxes["release_method"] = release_method_cb
-
-        CTkLabel(self.perfect_casting, text="Perfect Cast Release Delay:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Release Delay:").grid(row=2, column=2, padx=12, pady=10, sticky="w")
         perfect_release_delay_var = StringVar(value="0")
         self.vars["perfect_release_delay"] = perfect_release_delay_var
         perfect_release_delay_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_release_delay_var)
-        perfect_release_delay_entry.grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        perfect_release_delay_entry.grid(row=2, column=3, padx=12, pady=10, sticky="w")
 
-        CTkLabel(self.perfect_casting, text="Perfect Cast Threshold (pixels):").grid(row=5, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(self.perfect_casting, text="Threshold (pixels):").grid(row=3, column=0, padx=12, pady=10, sticky="w")
         perfect_threshold_var = StringVar(value="30")
         self.vars["perfect_threshold"] = perfect_threshold_var
         perfect_threshold_entry = CTkEntry(self.perfect_casting, width=120, textvariable=perfect_threshold_var)
-        perfect_threshold_entry.grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        perfect_threshold_entry.grid(row=3, column=1, padx=12, pady=10, sticky="w")
 
         shake_configuration = CTkFrame(scroll, border_width=2)
         shake_configuration.grid(row=3, column=0, padx=20, pady=20, sticky="nw")
         # Shake Configuration
-        CTkLabel(shake_configuration, text="Shake Configuration", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+        CTkLabel(shake_configuration, text="Shake Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(shake_configuration, text="Shake Failsafe (attempts):").grid(row=1, column=0, padx=12, pady=10, sticky="w" )
         shake_failsafe_var = StringVar(value="20")
         self.vars["shake_failsafe"] = shake_failsafe_var
@@ -978,85 +982,85 @@ class App(CTk):
         self.vars["shake_clicks"] = shake_clicks_var
         CTkEntry(shake_configuration, width=120, textvariable=shake_clicks_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(shake_configuration, text="Detection Method:").grid(row=4, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(shake_configuration, text="Detection Method:").grid(row=1, column=2, padx=12, pady=10, sticky="w" )
         detection_method_var = StringVar(value="Fish")
         self.vars["detection_method"] = detection_method_var
         detection_cb = CTkComboBox(shake_configuration, values=["Fish", "Fish + Bar", "Friend Area"], 
                                variable=detection_method_var, command=lambda v: self.set_status(f"Detection Method: {v}")
                                )
-        detection_cb.grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        detection_cb.grid(row=1, column=3, padx=12, pady=10, sticky="w")
         self.comboboxes["detection_method"] = detection_cb
-        CTkLabel(shake_configuration, text="Restart Method:").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(shake_configuration, text="Restart Method:").grid(row=2, column=2, padx=12, pady=10, sticky="w" )
         restart_method_var = StringVar(value="Fish + Bar")
         self.vars["restart_method"] = restart_method_var
         restart_cb = CTkComboBox(shake_configuration, values=["Fish", "Fish + Bar", "Friend Area"], 
                                variable=restart_method_var, command=lambda v: self.set_status(f"Restart Method: {v}")
                                )
-        restart_cb.grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        restart_cb.grid(row=2, column=3, padx=12, pady=10, sticky="w")
         self.comboboxes["restart_method"] = restart_cb
 
         ratio_settings = CTkFrame(scroll, border_width=2)
         ratio_settings.grid(row=4, column=0, padx=20, pady=20, sticky="nw")
-        CTkLabel(ratio_settings, text="Minigame Timing and Limits", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+        CTkLabel(ratio_settings, text="Minigame Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        CTkLabel(ratio_settings, text="Left Ratio From Side:").grid( row=1, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(ratio_settings, text="Left Ratio From Side:").grid(row=1, column=0, padx=12, pady=10, sticky="w" )
         left_ratio_var = StringVar(value="0.5")
         self.vars["left_ratio"] = left_ratio_var
-        CTkEntry( ratio_settings, width=120, textvariable=left_ratio_var ).grid(row=1, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry( ratio_settings, width=120, textvariable=left_ratio_var).grid(row=1, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Right Ratio From Side:").grid( row=2, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(ratio_settings, text="Right Ratio From Side:").grid(row=1, column=2, padx=12, pady=10, sticky="w" )
         right_ratio_var = StringVar(value="0.5")
         self.vars["right_ratio"] = right_ratio_var
-        CTkEntry( ratio_settings, width=120, textvariable=right_ratio_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry( ratio_settings, width=120, textvariable=right_ratio_var).grid(row=1, column=3, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Scan Delay (seconds):").grid(row=3, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(ratio_settings, text="Scan Delay (seconds):").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         minigame_scan_delay_var = StringVar(value="0.05")
         self.vars["minigame_scan_delay"] = minigame_scan_delay_var
-        CTkEntry(ratio_settings, width=120, textvariable=minigame_scan_delay_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(ratio_settings, width=120, textvariable=minigame_scan_delay_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
+
+        CTkLabel(ratio_settings, text="Animation Delay (seconds):").grid(row=2, column=2, padx=12, pady=10, sticky="w" )
+        bait_delay_var = StringVar(value="0.0")
+        self.vars["bait_delay"] = bait_delay_var
+        CTkEntry(ratio_settings, width=120, textvariable=bait_delay_var).grid(row=2, column=3, padx=12, pady=10, sticky="w")
+
+        CTkLabel(ratio_settings, text="Note Tracking Ratio:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
+        note_track_ratio_var = StringVar(value="0.05")
+        self.vars["note_track_ratio"] = note_track_ratio_var
+        CTkEntry(ratio_settings, width=120, textvariable=note_track_ratio_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
+
+        CTkLabel(ratio_settings, text="Charge Tracking Ratio:").grid(row=3, column=2, padx=12, pady=10, sticky="w")
+        charge_track_ratio_var = StringVar(value="0.23")
+        self.vars["charge_track_ratio"] = charge_track_ratio_var
+        CTkEntry(ratio_settings, width=120, textvariable=charge_track_ratio_var).grid(row=3, column=3, padx=12, pady=10, sticky="w")
 
         CTkLabel(ratio_settings, text="Restart Delay:").grid(row=4, column=0, padx=12, pady=10, sticky="w" )
         restart_delay_var = StringVar(value="1")
         self.vars["restart_delay"] = restart_delay_var
         CTkEntry(ratio_settings, width=120, textvariable=restart_delay_var ).grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Animation Delay (seconds):").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
-        bait_delay_var = StringVar(value="0.0")
-        self.vars["bait_delay"] = bait_delay_var
-        CTkEntry(ratio_settings, width=120, textvariable=bait_delay_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(ratio_settings, text="Note Tracking Ratio:").grid(row=6, column=0, padx=12, pady=10, sticky="w")
-        note_track_ratio_var = StringVar(value="0.05")
-        self.vars["note_track_ratio"] = note_track_ratio_var
-        CTkEntry(ratio_settings, width=120, textvariable=note_track_ratio_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(ratio_settings, text="Charge Tracking Ratio:").grid(row=7, column=0, padx=12, pady=10, sticky="w")
-        charge_track_ratio_var = StringVar(value="0.23")
-        self.vars["charge_track_ratio"] = charge_track_ratio_var
-        CTkEntry(ratio_settings, width=120, textvariable=charge_track_ratio_var).grid(row=7, column=1, padx=12, pady=10, sticky="w")
+        CTkLabel(ratio_settings, text="Stabilize Threshold:").grid(row=4, column=2, padx=12, pady=10, sticky="w")
+        stabilize_threshold_var = StringVar(value="6")
+        self.vars["stabilize_threshold"] = stabilize_threshold_var
+        CTkEntry(ratio_settings, width=120, textvariable=stabilize_threshold_var).grid(row=4, column=3, padx=12, pady=10, sticky="w")
 
         pid_settings = CTkFrame(scroll, border_width=2 )
         pid_settings.grid(row=5, column=0, padx=20, pady=20, sticky="nw")
-        CTkLabel(pid_settings, text="PD Controller Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+        CTkLabel(pid_settings, text="PD Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        CTkLabel(pid_settings, text="Stable KP:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(pid_settings, text="KP:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
         p_gain_var = StringVar(value="0.8")
         self.vars["proportional_gain"] = p_gain_var
         CTkEntry(pid_settings, width=120, textvariable=p_gain_var).grid(row=1, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(pid_settings, text="Stable KD:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(pid_settings, text="KD:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         d_gain_var = StringVar(value="0.4")
         self.vars["derivative_gain"] = d_gain_var
         CTkEntry(pid_settings, width=120, textvariable=d_gain_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(pid_settings, text="Stabilize Threshold:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
-        stabilize_threshold_var = StringVar(value="6")
-        self.vars["stabilize_threshold"] = stabilize_threshold_var
-        CTkEntry(pid_settings, width=120, textvariable=stabilize_threshold_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(pid_settings, text="Stable Clamp:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(pid_settings, text="PID Clamp:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
         pid_clamp_var = StringVar(value="100")
         self.vars["pid_clamp"] = pid_clamp_var
-        CTkEntry(pid_settings, width=120, textvariable=pid_clamp_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(pid_settings, width=120, textvariable=pid_clamp_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
 
         # Also show and hide here
         self.update_casting_visibility(casting_mode_var.get())
@@ -1081,38 +1085,38 @@ class App(CTk):
         discord_webhook_cb.grid(row=1, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["discord_webhook_mode"] = discord_webhook_cb
 
-        CTkLabel(discord_webhook, text="Discord Webhook Type:").grid(row=2, column=0, padx=12, pady=10, sticky="w" )
+        CTkLabel(discord_webhook, text="Discord Webhook Type:").grid(row=1, column=2, padx=12, pady=10, sticky="w" )
         discord_webhook_cd_var = StringVar(value="Cycles")
         self.vars["discord_webhook_cd"] = discord_webhook_cd_var
         discord_webhook_cb = CTkComboBox(discord_webhook, values=["Time", "Cycles", "Disabled"], 
                                variable=discord_webhook_cd_var, command=lambda v: self.set_status(f"Discord Webhook Type: {v}")
                                )
-        discord_webhook_cb.grid(row=2, column=1, padx=12, pady=10, sticky="w")
+        discord_webhook_cb.grid(row=1, column=3, padx=12, pady=10, sticky="w")
         self.comboboxes["discord_webhook_cd"] = discord_webhook_cb
 
-        CTkLabel(discord_webhook, text="Webhook URL:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(discord_webhook, text="Webhook URL:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         discord_webhook_url_var = StringVar(value="https://discord.com/api/webhooks/XXXXXXXXXX/XXXXXXXXXX")
         self.vars["discord_webhook_url"] = discord_webhook_url_var
-        CTkEntry(discord_webhook, width=260, textvariable=discord_webhook_url_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_url_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(discord_webhook, text="Webhook name:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(discord_webhook, text="Webhook name:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
         discord_webhook_name_var = StringVar(value="I Can't Fish")
         self.vars["discord_webhook_name"] = discord_webhook_name_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_name_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_name_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(discord_webhook, text="Trigger on ___ cycles:").grid(row=5, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(discord_webhook, text="Trigger on (cycles):").grid(row=2, column=2, padx=12, pady=10, sticky="w")
         discord_webhook_cycle_var = StringVar(value="3")
         self.vars["discord_webhook_cycle"] = discord_webhook_cycle_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_cycle_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_cycle_var).grid(row=2, column=3, padx=12, pady=10, sticky="w")
 
-        CTkLabel(discord_webhook, text="Trigger when time hits ___ (seconds):").grid(row=6, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(discord_webhook, text="Trigger at (seconds):").grid(row=3, column=2, padx=12, pady=10, sticky="w")
         discord_webhook_time_var = StringVar(value="60")
         self.vars["discord_webhook_time"] = discord_webhook_time_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_time_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_time_var).grid(row=3, column=3, padx=12, pady=10, sticky="w")
 
         # Test webhook button
         CTkButton(discord_webhook, text="Test Webhook", command=self.test_discord_webhook
-                  ).grid(row=7, column=0, columnspan=2, padx=12, pady=12, sticky="w")
+                  ).grid(row=4, column=0, columnspan=2, padx=12, pady=12, sticky="w")
         
         # Auto Totem
         auto_totem = CTkFrame(scroll, border_width=2)
@@ -1127,31 +1131,25 @@ class App(CTk):
                                )
         auto_totem_cb.grid(row=1, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["auto_totem_mode"] = auto_totem_cb
-        
+
+        CTkLabel(auto_totem, text="Use Sundial When: ").grid(row=1, column=2, padx=12, pady=10, sticky="w" )
+        use_sundial_when_var = StringVar(value="Disabled")
+        self.vars["use_sundial_when"] = use_sundial_when_var
+        auto_totem_cb = CTkComboBox(auto_totem, values=["Day", "Night", "Disabled"], 
+                               variable=use_sundial_when_var, command=lambda v: self.set_status(f"Use Sundial When: {v}")
+                               )
+        auto_totem_cb.grid(row=1, column=3, padx=12, pady=10, sticky="w")
+        self.comboboxes["use_sundial_when"] = auto_totem_cb
+
         CTkLabel(auto_totem, text="Totem Delay (seconds):").grid(row=2, column=0, padx=12, pady=10, sticky="w")
         totem_delay_var = StringVar(value="900")
         self.vars["totem_delay"] = totem_delay_var
         CTkEntry(auto_totem, width=120, textvariable=totem_delay_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(auto_totem, text="Totem Cycles:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
+        CTkLabel(auto_totem, text="Totem Cycles:").grid(row=2, column=2, padx=12, pady=10, sticky="w")
         totem_cycles_var = StringVar(value="70")
         self.vars["totem_cycles"] = totem_cycles_var
-        CTkEntry(auto_totem, width=120, textvariable=totem_cycles_var).grid(row=3, column=1, padx=12, pady=10, sticky="w")
-
-        use_sundial_var = StringVar(value="off")
-        self.vars["use_sundial"] = use_sundial_var
-        use_sundial_cb = CTkCheckBox(auto_totem, text="Use Sundial if Totem fails", variable=use_sundial_var, onvalue="on", offvalue="off")
-        use_sundial_cb.grid(row=4, column=0, padx=12, pady=8, sticky="w")
-
-        CTkLabel(auto_totem, text="Totem Fail Color:").grid(row=5, column=0, padx=12, pady=10, sticky="w")
-        totem_color_var = StringVar(value="#7effad")
-        self.vars["totem_color"] = totem_color_var
-        CTkEntry(auto_totem, width=120, textvariable=totem_color_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
-
-        CTkLabel(auto_totem, text="Totem Fail Tolerance:").grid(row=6, column=0, padx=12, pady=10, sticky="w")
-        totem_tolerance_var = StringVar(value="4")
-        self.vars["totem_tolerance"] = totem_tolerance_var
-        CTkEntry(auto_totem, width=120, textvariable=totem_tolerance_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(auto_totem, width=120, textvariable=totem_cycles_var).grid(row=2, column=3, padx=12, pady=10, sticky="w")
     
         # Auto Reconnect
         auto_reconnect = CTkFrame(scroll, border_width=2)
@@ -1168,6 +1166,23 @@ class App(CTk):
         reconnect_link_var = StringVar(value="https://www.roblox.com/games/16732694052/Fisch?privateServerLinkCode=18045795843383847993884150042526")
         self.vars["reconnect_link"] = reconnect_link_var
         CTkEntry(auto_reconnect, width=220, textvariable=reconnect_link_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
+    # Advanced tab
+    def build_advanced_tab(self, parent):
+        scroll = CTkScrollableFrame(parent)
+        scroll.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        # VERY important
+        parent.grid_rowconfigure(0, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
+
+        # Detection
+        detection_settings = CTkFrame(scroll, border_width=2)
+        detection_settings.grid(row=0, column=0, padx=20, pady=20, sticky="nw")
+        CTkLabel(detection_settings, text="Detection Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
+
+        CTkLabel(detection_settings, text="Required Fish Pixels:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
+        required_fish_pixels = StringVar(value="8")
+        self.vars["required_fish_pixels"] = required_fish_pixels
+        CTkEntry(detection_settings, width=120, textvariable=required_fish_pixels).grid(row=1, column=1, padx=12, pady=10, sticky="w")
     # Show and hide parts of the GUI
     def update_casting_visibility(self, mode):
         if mode == "Perfect":
@@ -1185,27 +1200,18 @@ class App(CTk):
     def get_config_list(self):
         if not os.path.exists(CONFIG_DIR):
             return ["default"]
-
-        folders = [
-            name for name in os.listdir(CONFIG_DIR)
-            if os.path.isdir(os.path.join(CONFIG_DIR, name))
-        ]
-
+        folders = [name for name in os.listdir(CONFIG_DIR) if os.path.isdir(os.path.join(CONFIG_DIR, name))]
         return folders if folders else ["default"]
-
     def refresh_config_dropdown(self):
         configs = self.get_config_list()
         self.config_dropdown.configure(values=configs)
     def on_config_selected(self, new_name):
-        # Save current config BEFORE switching
+        "Save current config BEFORE switching"
         current_name = getattr(self, "_last_config", None)
-
         if current_name:
             self.save_settings(current_name)
-
         # Load new config
         self.load_settings(new_name)
-
         # Track current config
         self._last_config = new_name
     def save_current_config(self):
@@ -1218,7 +1224,6 @@ class App(CTk):
         """Save all settings to a JSON config file."""
         if not os.path.exists(CONFIG_DIR):
             os.makedirs(CONFIG_DIR)
-        
         data = {}
         # Save all StringVar and related variables
         try:
@@ -1230,31 +1235,26 @@ class App(CTk):
                         print(f"Skipping {key}: {e}")
         except Exception as e:
             print(f"Error saving vars: {e}")
-        
         # Save checkbox states
         try:
             for key, checkbox in self.checkboxes.items():
                 data[f"checkbox_{key}"] = checkbox.get()
         except Exception as e:
             print(f"Error saving checkboxes: {e}")
-        
         # Save combobox states
         try:
             for key, combobox in self.comboboxes.items():
                 data[f"combobox_{key}"] = combobox.get()
         except Exception as e:
             print(f"Error saving comboboxes: {e}")
-
         # Save switch states
         try:
             for key, switch in self.switches.items():
                 data[f"switch_{key}"] = self.vars[key].get()
         except Exception as e:
             print(f"Error saving switches: {e}")
-
         config_folder = os.path.join(CONFIG_DIR, name)
         os.makedirs(config_folder, exist_ok=True)
-
         path = os.path.join(config_folder, "config.json")
         # Save misc settings and set status
         self.save_misc_settings()
@@ -1265,23 +1265,19 @@ class App(CTk):
             self.set_status(f"Config saved: {name}")
         except Exception as e:
             self.set_status(f"Error saving config: {e}")
-    
     def load_settings(self, name="default"):
         """Load settings from a JSON config file."""
         path = os.path.join(CONFIG_DIR, name, "config.json")
         rod_folder = os.path.join(CONFIG_DIR, name.replace(".json", ""))
-        
         if not os.path.exists(path):
             self.set_status(f"Config not found: {name}")
             return
-        
         try:
             with open(path, "r") as f:
                 data = json.load(f)
         except Exception as e:
             self.set_status(f"Error loading config: {e}")
             return
-        
         # Load StringVar and related variables
         try:
             for key, var in self.vars.items():
@@ -1289,7 +1285,6 @@ class App(CTk):
                     var.set(data[key])
         except Exception as e:
             print(f"Error loading vars: {e}")
-        
         # Load checkbox states
         try:
             for key, checkbox in self.checkboxes.items():
@@ -1302,7 +1297,6 @@ class App(CTk):
                         checkbox.deselect()
         except Exception as e:
             print(f"Error loading checkboxes: {e}")
-        
         # Load combobox states
         try:
             for key, cb in self.comboboxes.items():
@@ -1311,7 +1305,6 @@ class App(CTk):
                     cb.set(data[combobox_key])
         except Exception as e:
             print(f"Error loading comboboxes: {e}")
-
         # Load switch states (must call select/deselect to update visuals)
         try:
             for key, switch in self.switches.items():
@@ -1323,23 +1316,16 @@ class App(CTk):
                         switch.deselect()
         except Exception as e:
             print(f"Error loading switches: {e}")
-
         # Load templates for image search / auto totem
         left_bar_path  = os.path.join(rod_folder, "left_bar.png")
         right_bar_path = os.path.join(rod_folder, "right_bar.png")
         fish_path      = os.path.join(rod_folder, "fish.png")
-
         self.templates = {
             "left_bar":  cv2.imread(left_bar_path, 0)  if os.path.exists(left_bar_path)  else None,
             "right_bar": cv2.imread(right_bar_path, 0) if os.path.exists(right_bar_path) else None,
             "fish":      cv2.imread(fish_path, 0)      if os.path.exists(fish_path)      else None,
         }
-
-        required_images = [
-            "sun.png",
-            "moon.png",
-        ]
-
+        required_images = ["sun.png", "moon.png"]
         if verify_images_exist(required_images) == False:
             return  # STOP instead of crashing
         # Save misc settings and show status
@@ -1418,7 +1404,6 @@ class App(CTk):
     def save_misc_settings(self):
         """Save misc settings without overwriting last_config."""
         path = os.path.join(CONFIG_DIR, "last_config.json")
-
         # Load existing content
         data = {}
         if os.path.exists(path):
@@ -1427,7 +1412,6 @@ class App(CTk):
                     data = json.load(f)
             except:
                 data = {}
-
         # Build clean bar areas
         clean_bar_areas = {}
         for key in ["shake", "fish", "friend", "totem"]:
@@ -1441,17 +1425,14 @@ class App(CTk):
                 }
             else:
                 clean_bar_areas[key] = None
-
         # Update fields (MERGE ONLY)
         data["last_rod"] = self.current_rod_name
         data["bar_areas"] = clean_bar_areas
-
         # Save hotkeys
         data["start_key"] = self.vars["start_key"].get()
         data["change_bar_areas_key"] = self.vars["change_bar_areas_key"].get()
         data["screenshot_key"] = self.vars["screenshot_key"].get()
         data["stop_key"] = self.vars["stop_key"].get()
-
         # Write merged result
         with open(path, "w") as f:
             json.dump(data, f, indent=4)
@@ -1462,31 +1443,24 @@ class App(CTk):
         self.hotkey_change_areas = self._string_to_key(self.vars["change_bar_areas_key"].get())
         self.hotkey_screenshot = self._string_to_key(self.vars["screenshot_key"].get())
         self.hotkey_stop = self._string_to_key(self.vars["stop_key"].get())
-
     def _string_to_key(self, key_string):
         key_string = key_string.strip().lower()
-
         # Try special keys
         if hasattr(Key, key_string):
             return getattr(Key, key_string)
-
         # Fallback to character
         return key_string
-
     def _normalize_hotkey_value(self, hotkey):
         if isinstance(hotkey, Key):
             return str(hotkey).replace("Key.", "").lower()
         return str(hotkey).strip().lower()
-
     def normalize_key(self, key):
         try:
             return key.char.lower()  # letter keys
         except AttributeError:
             return str(key).replace("Key.", "").lower()
-
     def on_key_press(self, key):
         pressed_key = self.normalize_key(key)
-
         if pressed_key == self._normalize_hotkey_value(self.hotkey_start) and not self.macro_running:
             # Save settings
             config_name = self.config_var.get()
@@ -1497,13 +1471,10 @@ class App(CTk):
                 self.macro_running = True
                 self.after(0, self.withdraw)
                 threading.Thread(target=self.start_macro, daemon=True).start() # This will start the macro in a new thread, allowing the GUI to remain responsive
-
         elif pressed_key == self._normalize_hotkey_value(self.hotkey_change_areas):
             self.open_area_selector()
-
         elif pressed_key == self._normalize_hotkey_value(self.hotkey_screenshot):
             self._take_debug_screenshot()
-
         elif pressed_key == self._normalize_hotkey_value(self.hotkey_stop):
             self.stop_macro()
     def set_status(self, text, key=None):
@@ -1580,15 +1551,7 @@ class App(CTk):
         self.set_status("Area selector opened (press key again to close)")
     # HEX to BBBGGGRRR for OpenCV
     def _hex_to_bgr(self, hex_color):
-        """
-        Convert hex color to BGR tuple for OpenCV.
-        
-        Args:
-            hex_color: Hex color string (e.g., "#FFFFFF")
-        
-        Returns:
-            (B, G, R) tuple or None if invalid
-        """
+        "Convert hex color to BGR tuple for OpenCV."
         if hex_color is None or hex_color.lower() in ["none", "#none", ""]:
             return None
         
@@ -1604,45 +1567,48 @@ class App(CTk):
         return None
     # Click at X/Y position (using ctypes)
     def _click_at(self, x, y, click_count=1):
-        click_mode2 = self.vars["fish_color"].get()
-        if click_mode2 == "on":
+        click_mode = 2 # Will be replaced later
+        if sys.platform == "win32":
+            click_mode = 0
+        elif sys.platform == "darwin":
+            click_mode = 1
+        else:
+            click_mode = 2
+        if click_mode == 0:
+            # Move cursor
+            windll.SetCursorPos(x, y)
+            # Important: tiny movement so Roblox registers input
+            windll.mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, 0)
+            for i in range(click_count):
+                windll.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                windll.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                if i < click_count - 1:
+                    time.sleep(0.03)
+        elif click_mode == 1:
+            x = int(x)
+            y = int(y)
+
+            # Move cursor
+            _move_mouse(x, y)
+
+            # Tiny movement (Roblox trick)
+            _move_mouse(x, y + 1)
+
+            for i in range(click_count):
+                _mouse_event(Quartz.kCGEventLeftMouseDown, x, y)
+                _mouse_event(Quartz.kCGEventLeftMouseUp, x, y)
+
+                if i < click_count - 1:
+                    time.sleep(0.03)
+        elif click_mode == 2:
             mouse_controller.position = (x, y)
             time.sleep(0.01)
-
-            # micro-jitter
+            # Jitter to prevent Roblox from crashing
             mouse_controller.position = (x + 3, y + 3)
             mouse_controller.position = (x, y)
-
             mouse_controller.press(Button.left)
             time.sleep(0.04)
             mouse_controller.release(Button.left)
-        else:
-            if sys.platform == "win32":
-                # Move cursor
-                windll.SetCursorPos(x, y)
-                # Important: tiny movement so Roblox registers input
-                windll.mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, 0)
-                for i in range(click_count):
-                    windll.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-                    windll.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-                    if i < click_count - 1:
-                        time.sleep(0.03)
-            elif sys.platform == "darwin":
-                x = int(x)
-                y = int(y)
-
-                # Move cursor
-                _move_mouse(x, y)
-
-                # Tiny movement (Roblox trick)
-                _move_mouse(x, y + 1)
-
-                for i in range(click_count):
-                    _mouse_event(Quartz.kCGEventLeftMouseDown, x, y)
-                    _mouse_event(Quartz.kCGEventLeftMouseUp, x, y)
-
-                    if i < click_count - 1:
-                        time.sleep(0.03)
     # Logging-related functions
     def _discord_text_worker(self, webhook_url, message_prefix, loop_count, show_status):
         """Worker function to send text webhook."""
@@ -2023,6 +1989,57 @@ class App(CTk):
         center_y = int(np.mean(y_coords))
 
         return (center_x, center_y)
+    def _find_color_cluster(self, frame, target_color_hex, tolerance=8, min_area=10):
+        """
+        Find the largest color cluster and return its center.
+
+        Args:
+            frame: BGR image
+            target_color_hex: hex color string
+            tolerance: color tolerance
+            min_area: minimum cluster size to be valid
+
+        Returns:
+            (center_x, center_y) or None
+        """
+        # required_fish_pixels
+        if frame is None:
+            return None
+
+        # --- COLOR MASK (vectorized like your fast version) ---
+        target_bgr = np.array(self._hex_to_bgr(target_color_hex), dtype=np.int16)
+        frame_int = frame.astype(np.int16)
+        tol = int(np.clip(tolerance, 0, 255))
+
+        mask = np.all(np.abs(frame_int - target_bgr) <= tol, axis=2).astype(np.uint8)
+
+        if not np.any(mask):
+            return None
+
+        # --- CONNECTED COMPONENTS (cluster detection) ---
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+
+        if num_labels <= 1:
+            return None  # only background
+
+        # Skip label 0 (background)
+        largest_label = None
+        largest_area = 0
+
+        for label in range(1, num_labels):
+            area = stats[label, cv2.CC_STAT_AREA]
+
+            if area > largest_area and area >= min_area:
+                largest_area = area
+                largest_label = label
+
+        if largest_label is None:
+            return None
+
+        # --- CENTROID ---
+        center_x, center_y = centroids[largest_label]
+
+        return int(center_x), int(center_y)
     def _find_bar_edges(
         self,
         frame,
@@ -2149,12 +2166,14 @@ class App(CTk):
         left_tol = int(self.vars["left_tolerance"].get() or 8)
         right_tol = int(self.vars["right_tolerance"].get() or 8)
         fish_tol = int(self.vars["fish_tolerance"].get() or 1)
+
+        required_fish_pixels = int(self.vars["required_fish_pixels"].get() or 10)
         # macOS tolerance buffer to make configs cross-compatible
         if sys.platform == "darwin":
             left_tol += 2
             right_tol += 2
             fish_tol += 2
-        fish_center = self._find_color_center(img, fish_hex, fish_tol)
+        fish_center = self._find_color_cluster(img, fish_hex, fish_tol, required_fish_pixels)
         left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, right_bar_hex, left_tol, right_tol)
         if left_bar_center is None:
             left_bar_center, right_bar_center = self._find_bar_edges(img, right_bar_hex, right_bar_hex, right_tol, right_tol)

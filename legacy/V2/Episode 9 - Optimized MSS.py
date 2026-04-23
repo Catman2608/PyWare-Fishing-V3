@@ -784,17 +784,17 @@ class App(CTk):
         CTkLabel(discord_webhook, text="Webhook name:").grid(row=4, column=0, padx=12, pady=10, sticky="w")
         discord_webhook_name_var = StringVar(value="I Can't Fish")
         self.vars["discord_webhook_name"] = discord_webhook_name_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_name_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_name_var).grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(discord_webhook, text="Trigger on ___ cycles:").grid(row=5, column=0, padx=12, pady=10, sticky="w")
         discord_webhook_cycle_var = StringVar(value="3")
         self.vars["discord_webhook_cycle"] = discord_webhook_cycle_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_cycle_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_cycle_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(discord_webhook, text="Trigger when time hits ___ (seconds):").grid(row=6, column=0, padx=12, pady=10, sticky="w")
         discord_webhook_time_var = StringVar(value="60")
         self.vars["discord_webhook_time"] = discord_webhook_time_var
-        CTkEntry(discord_webhook, width=160, textvariable=discord_webhook_time_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
+        CTkEntry(discord_webhook, width=120, textvariable=discord_webhook_time_var).grid(row=6, column=1, padx=12, pady=10, sticky="w")
 
         # Auto Totem
         auto_totem = CTkFrame(scroll, border_width=2)
