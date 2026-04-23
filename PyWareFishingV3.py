@@ -2090,70 +2090,56 @@ class App(CTk):
 
     def _update_arrow_box_estimation(self, arrow_centroid_x, is_holding, capture_width):
         """
-        Find bar center based on arrow position (similar to IRUS 675/Comet logic)
-        - If holding: arrow is RIGHT edge → box extends LEFT
-        - If not holding: arrow is LEFT edge → box extends RIGHT
-        - When state swaps: measure arrow-to-arrow distance = box length
+        Estimate box position based on arrow indicator using the last bar positions in __init__.
+        If holding: arrow is on RIGHT edge, reconstruct based on LEFT and last RIGHT
+        If not holding: arrow is on LEFT edge, reconstruct based on RIGHT and last LEFT
         """
-
-        current_time = time.time()
-
-        # - Handle missing arrow -
         if arrow_centroid_x is None:
-            if self.last_known_box_center_x is not None:
-                return self.last_known_box_center_x, self.last_left_x, self.last_right_x
-            
-            if self.last_left_x is not None and self.last_right_x is not None:
-                center = (self.last_left_x + self.last_right_x) / 2.0
-                return center, self.last_left_x, self.last_right_x
-            
-            return None, None, None
+            return self.last_known_box_center_x, self.last_left_x, self.last_right_x
 
-        # - Detect state swap -
-        state_swapped = (
-            self.last_holding_state is not None and 
-            is_holding != self.last_holding_state
-        )
-
-        # - Recalculate box size when swapped -
-        if state_swapped and self.last_indicator_x is not None:
-            new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
-            if new_box_size >= 10:
-                self.estimated_box_length = new_box_size
-
-        # - Default box size -
-        if self.estimated_box_length is None or self.estimated_box_length <= 0:
+        # --- INIT ---
+        if self.estimated_box_length is None:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # - Position the box -
+        # --- STATE SWAP DETECTION ---
+        if self.last_holding_state is not None and self.last_indicator_x is not None:
+            if is_holding != self.last_holding_state:
+                delta = abs(arrow_centroid_x - self.last_indicator_x)
+
+                if 10 < delta < capture_width * 0.8:
+                    self.estimated_box_length = (
+                        0.7 * self.estimated_box_length + 0.3 * delta
+                    )
+
+        # --- RECONSTRUCT ---
         if is_holding:
-            # arrow on RIGHT
-            self.last_right_x = float(arrow_centroid_x)
-            self.last_left_x = self.last_right_x - self.estimated_box_length
+            right = arrow_centroid_x
+            left = right - self.estimated_box_length
         else:
-            # arrow on LEFT
-            self.last_left_x = float(arrow_centroid_x)
-            self.last_right_x = self.last_left_x + self.estimated_box_length
+            left = arrow_centroid_x
+            right = left + self.estimated_box_length
 
-        # - Clamp to capture bounds -
-        if self.last_left_x < 0:
-            self.last_left_x = 0.0
-            self.last_right_x = self.estimated_box_length
+        # --- CLAMP ---
+        if left < 0:
+            left = 0
+            right = self.estimated_box_length
+        elif right > capture_width:
+            right = capture_width
+            left = right - self.estimated_box_length
 
-        if self.last_right_x > capture_width:
-            self.last_right_x = float(capture_width)
-            self.last_left_x = self.last_right_x - self.estimated_box_length
+        # --- CENTER SMOOTHING ---
+        center = (left + right) / 2
+        if self.last_known_box_center_x is not None:
+            center = 0.8 * self.last_known_box_center_x + 0.2 * center
 
-        # - Calculate center -
-        box_center = (self.last_left_x + self.last_right_x) / 2.0
-        self.last_known_box_center_x = box_center
-        self.last_known_box_timestamp = current_time
-
-        # - Update state -
+        # --- SAVE ---
+        self.last_left_x = left
+        self.last_right_x = right
+        self.last_known_box_center_x = center
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
-        return box_center, self.last_left_x, self.last_right_x
+        return int(center), left, right
     # Do pixel/image search
     def _do_pixel_search(self, img):
         fish_hex = self.vars["fish_color"].get()
