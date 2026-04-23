@@ -2,7 +2,6 @@
 from customtkinter import *
 import tkinter as tk
 from tkinter import messagebox
-import win32mica
 # Save and load
 import json
 import os
@@ -582,29 +581,6 @@ class App(CTk):
         self.geometry("800x600")
         self.title("PyWare Fishing V3")
 
-        # Setup OS font
-        def get_default_font():
-            if sys.platform == "win32":
-                return ("Segoe UI", 13)
-            elif sys.platform == "darwin":
-                return ("SF Pro Text", 13)  # macOS fallback
-            return ("Arial", 13) # Linux fallback
-
-        default_font_family, default_font_size = get_default_font()
-
-        # CustomTkinter widgets created without an explicit font pull their
-        # defaults from ThemeManager.theme["CTkFont"], not per-widget
-        # _default_font attributes.
-        ThemeManager.theme["CTkFont"]["family"] = default_font_family
-        ThemeManager.theme["CTkFont"]["size"] = default_font_size
-        # Setup mica effect
-        self.update_idletasks()  # ensure window exists
-
-        if sys.platform == "win32":
-            hwnd = self.winfo_id()
-            # MICAALT gives the frosted-acrylic variant that works on Win 11 22H2+.
-            # ColorMode 0 = auto (follows system light/dark setting).
-            win32mica.ApplyMica(hwnd, Theme=win32mica.MicaTheme.AUTO, Style=win32mica.MicaStyle.ALT)
         # Status Bar 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -618,7 +594,7 @@ class App(CTk):
         # Logo Label
         logo_label = CTkLabel(
             top_bar, 
-            text="PyWare Fishing V3",
+            text="PYWARE FISHING V3",
             font=CTkFont(size=16, weight="bold")
         )
         logo_label.grid(row=0, column=0, sticky="w")
@@ -804,7 +780,7 @@ class App(CTk):
         arrow_tolerance_entry = CTkEntry(color_settings, placeholder_text="8", width=120, textvariable=arrow_tolerance_var)
         arrow_tolerance_entry.grid(row=4, column=3, padx=12, pady=10, sticky="w")
         CTkLabel(color_settings, text="Tolerance:").grid(row=5, column=2, padx=12, pady=10, sticky="w")
-        fish_tolerance_var = StringVar(value="0")
+        fish_tolerance_var = StringVar(value="4")
         self.vars["fish_tolerance"] = fish_tolerance_var
         CTkEntry(color_settings, width=120, textvariable=fish_tolerance_var).grid(row=5, column=3, padx=12, pady=10, sticky="w")
         # Shake Color
@@ -833,7 +809,7 @@ class App(CTk):
         CTkEntry(color_settings, width=120, textvariable=perfect_color_var).grid(row=8, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(color_settings, text="Tolerance:").grid(row=8, column=2, padx=12, pady=10, sticky="w")
-        perfect_cast_tolerance_var = StringVar(value="14")
+        perfect_cast_tolerance_var = StringVar(value="16")
         self.vars["perfect_cast_tolerance"] = perfect_cast_tolerance_var
         perfect_cast_tolerance_entry = CTkEntry(color_settings, width=120, textvariable=perfect_cast_tolerance_var)
         perfect_cast_tolerance_entry.grid(row=8, column=3, padx=12, pady=10, sticky="w")
@@ -844,7 +820,7 @@ class App(CTk):
         CTkEntry(color_settings, width=120, textvariable=perfect_color2_var).grid(row=9, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(color_settings, text="Tolerance:").grid(row=9, column=2, padx=12, pady=10, sticky="w")
-        perfect_cast2_tolerance_var = StringVar(value="12")
+        perfect_cast2_tolerance_var = StringVar(value="5")
         self.vars["perfect_cast2_tolerance"] = perfect_cast2_tolerance_var
         perfect_cast2_tolerance_entry = CTkEntry(color_settings, width=120, textvariable=perfect_cast2_tolerance_var)
         perfect_cast2_tolerance_entry.grid(row=9, column=3, padx=12, pady=10, sticky="w")
@@ -1011,7 +987,7 @@ class App(CTk):
         detection_cb.grid(row=4, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["detection_method"] = detection_cb
         CTkLabel(shake_configuration, text="Restart Method:").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
-        restart_method_var = StringVar(value="Fish")
+        restart_method_var = StringVar(value="Fish + Bar")
         self.vars["restart_method"] = restart_method_var
         restart_cb = CTkComboBox(shake_configuration, values=["Fish", "Fish + Bar", "Friend Area"], 
                                variable=restart_method_var, command=lambda v: self.set_status(f"Restart Method: {v}")
@@ -1044,7 +1020,7 @@ class App(CTk):
         CTkEntry(ratio_settings, width=120, textvariable=restart_delay_var ).grid(row=4, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(ratio_settings, text="Animation Delay (seconds):").grid(row=5, column=0, padx=12, pady=10, sticky="w" )
-        bait_delay_var = StringVar(value="0.6")
+        bait_delay_var = StringVar(value="0.0")
         self.vars["bait_delay"] = bait_delay_var
         CTkEntry(ratio_settings, width=120, textvariable=bait_delay_var).grid(row=5, column=1, padx=12, pady=10, sticky="w")
 
@@ -1063,12 +1039,12 @@ class App(CTk):
         CTkLabel(pid_settings, text="PD Controller Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
         CTkLabel(pid_settings, text="Stable KP:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
-        p_gain_var = StringVar(value="0.6")
+        p_gain_var = StringVar(value="0.8")
         self.vars["proportional_gain"] = p_gain_var
         CTkEntry(pid_settings, width=120, textvariable=p_gain_var).grid(row=1, column=1, padx=12, pady=10, sticky="w")
 
         CTkLabel(pid_settings, text="Stable KD:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
-        d_gain_var = StringVar(value="0.6")
+        d_gain_var = StringVar(value="0.4")
         self.vars["derivative_gain"] = d_gain_var
         CTkEntry(pid_settings, width=120, textvariable=d_gain_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
@@ -2047,68 +2023,6 @@ class App(CTk):
         center_y = int(np.mean(y_coords))
 
         return (center_x, center_y)
-    # Temporary strict edge detection for black bars (will be improved later)
-    def _find_bar_edges_strict(
-        self,
-        frame,
-        left_hex,
-        right_hex,
-        tolerance=15,
-        tolerance2=15,
-        scan_height_ratio=0.55
-        ):
-        if frame is None:
-            return None, None
-
-        h, w = frame.shape[:2]
-        y = int(h * scan_height_ratio)
-
-        # Convert to BGR
-        left_bgr = np.array(self._hex_to_bgr(left_hex), dtype=np.int16)
-        right_bgr = np.array(self._hex_to_bgr(right_hex), dtype=np.int16)
-
-        # Extract single horizontal scan line
-        line = frame[y].astype(np.int16)
-
-        # Clamp tolerances
-        tol_l = int(np.clip(tolerance, 0, 255))
-        tol_r = int(np.clip(tolerance2, 0, 255))
-
-        bar_x_coords = None
-
-        # --- LEFT BAR COLOR ---
-        if left_hex is not None:
-            lower_l = left_bgr - tol_l
-            upper_l = left_bgr + tol_l
-
-            left_mask = np.all((line >= lower_l) & (line <= upper_l), axis=1)
-            left_indices = np.where(left_mask)[0]
-
-            if left_indices.size > 0:
-                bar_x_coords = left_indices
-
-        # --- RIGHT BAR COLOR ---
-        if right_hex is not None:
-            lower_r = right_bgr - tol_r
-            upper_r = right_bgr + tol_r
-
-            right_mask = np.all((line >= lower_r) & (line <= upper_r), axis=1)
-            right_indices = np.where(right_mask)[0]
-
-            if right_indices.size > 0:
-                if bar_x_coords is not None:
-                    bar_x_coords = np.concatenate([bar_x_coords, right_indices])
-                else:
-                    bar_x_coords = right_indices
-
-        # --- FINAL EDGE EXTRACTION ---
-        if bar_x_coords is not None and bar_x_coords.size > 0:
-            bar_left_x = int(np.min(bar_x_coords))
-            bar_right_x = int(np.max(bar_x_coords))
-            return bar_left_x, bar_right_x
-
-        return None, None
-    
     def _find_bar_edges(
         self,
         frame,
@@ -2117,28 +2031,38 @@ class App(CTk):
         tolerance=15,
         tolerance2=15,
         scan_height_ratio=0.55
-        ):
+    ):
         if frame is None:
             return None, None
 
         h, w, _ = frame.shape
         y = int(h * scan_height_ratio)
 
+        # Convert to BGR
         left_bgr = np.array(self._hex_to_bgr(left_hex), dtype=np.int16)
         right_bgr = np.array(self._hex_to_bgr(right_hex), dtype=np.int16)
 
+        # Extract scan line
         line = frame[y].astype(np.int16)
 
+        # Clamp tolerances
         tol_l = int(np.clip(tolerance, 0, 255))
         tol_r = int(np.clip(tolerance2, 0, 255))
 
-        # V1-style threshold comparison
-        left_mask = np.all(line >= (left_bgr - tol_l), axis=1)
-        right_mask = np.all(line >= (right_bgr - tol_r), axis=1)
+        # --- LEFT MASK (with lower + upper bound) ---
+        left_lower = left_bgr - tol_l
+        left_upper = left_bgr + tol_l
+        left_mask = np.all((line >= left_lower) & (line <= left_upper), axis=1)
+
+        # --- RIGHT MASK (with lower + upper bound) ---
+        right_lower = right_bgr - tol_r
+        right_upper = right_bgr + tol_r
+        right_mask = np.all((line >= right_lower) & (line <= right_upper), axis=1)
 
         left_indices = np.where(left_mask)[0]
         right_indices = np.where(right_mask)[0]
 
+        # Keep your original edge logic
         left_edge = int(left_indices[0]) if left_indices.size else None
         right_edge = int(right_indices[-1]) if right_indices.size else None
 
@@ -2174,7 +2098,7 @@ class App(CTk):
 
         current_time = time.time()
 
-        # ---- Handle missing arrow ----
+        # - Handle missing arrow -
         if arrow_centroid_x is None:
             if self.last_known_box_center_x is not None:
                 return self.last_known_box_center_x, self.last_left_x, self.last_right_x
@@ -2185,23 +2109,23 @@ class App(CTk):
             
             return None, None, None
 
-        # ---- Detect state swap ----
+        # - Detect state swap -
         state_swapped = (
             self.last_holding_state is not None and 
             is_holding != self.last_holding_state
         )
 
-        # ---- Recalculate box size when swapped ----
+        # - Recalculate box size when swapped -
         if state_swapped and self.last_indicator_x is not None:
             new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
             if new_box_size >= 10:
                 self.estimated_box_length = new_box_size
 
-        # ---- Default box size ----
+        # - Default box size -
         if self.estimated_box_length is None or self.estimated_box_length <= 0:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # ---- Position the box ----
+        # - Position the box -
         if is_holding:
             # arrow on RIGHT
             self.last_right_x = float(arrow_centroid_x)
@@ -2211,7 +2135,7 @@ class App(CTk):
             self.last_left_x = float(arrow_centroid_x)
             self.last_right_x = self.last_left_x + self.estimated_box_length
 
-        # ---- Clamp to capture bounds ----
+        # - Clamp to capture bounds -
         if self.last_left_x < 0:
             self.last_left_x = 0.0
             self.last_right_x = self.estimated_box_length
@@ -2220,34 +2144,17 @@ class App(CTk):
             self.last_right_x = float(capture_width)
             self.last_left_x = self.last_right_x - self.estimated_box_length
 
-        # ---- Calculate center ----
+        # - Calculate center -
         box_center = (self.last_left_x + self.last_right_x) / 2.0
         self.last_known_box_center_x = box_center
         self.last_known_box_timestamp = current_time
 
-        # ---- Update state ----
+        # - Update state -
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
         return box_center, self.last_left_x, self.last_right_x
     # Do pixel/image search
-    def _do_image_search(self, img, img_h):
-        fish_template = self.templates["fish"]
-        left_template  = self.templates["left_bar"]
-        right_template = self.templates["right_bar"]
-
-        fish_template_h = fish_template.shape[0]
-        bar_template_h  = left_template.shape[0]
-
-        # ---- Fish region (remove bottom bar part) ----
-        fish_region = img[:img_h - bar_template_h - 10, :]
-        fish_x = self._find_template(fish_region, fish_template, 0.8)
-
-        # ---- Bar region (remove top fish part) ----
-        bar_region = img[fish_template_h + 10:, :]
-        left_x = self._find_template(bar_region, left_template, 0.8)
-        right_x = self._find_template(bar_region, right_template, 0.8)
-        return fish_x, left_x, right_x
     def _do_pixel_search(self, img):
         fish_hex = self.vars["fish_color"].get()
         left_bar_hex = self.vars["left_color"].get()
@@ -2262,44 +2169,11 @@ class App(CTk):
             right_tol += 2
             fish_tol += 2
         fish_center = self._find_color_center(img, fish_hex, fish_tol)
-        # Strict Detection (main priority)
-        left_bar_center, right_bar_center = self._find_bar_edges_strict(
-            img, left_bar_hex, right_bar_hex, left_tol, right_tol
-        )
-
-        # Try strict fallback for left
+        left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, right_bar_hex, left_tol, right_tol)
         if left_bar_center is None:
-            l2, r2 = self._find_bar_edges_strict(
-                img, right_bar_hex, right_bar_hex, right_tol, right_tol
-            )
-            if l2 is not None:
-                left_bar_center, right_bar_center = l2, r2
-
-        # Try strict fallback for right
-        if right_bar_center is None:
-            l2, r2 = self._find_bar_edges_strict(
-                img, left_bar_hex, left_bar_hex, left_tol, left_tol
-            )
-            if r2 is not None:
-                left_bar_center, right_bar_center = l2, r2
-        # Normal detection (If strict fails and this doesn't detect black bars well)
-        if left_bar_center is None and right_bar_center is None:
-            left_bar_center, right_bar_center = self._find_bar_edges(
-                img, left_bar_hex, right_bar_hex, left_tol, right_tol
-            )
-
-        # Normal fallback for left
-        if left_bar_center is None:
-            left_bar_center, right_bar_center = self._find_bar_edges(
-                img, right_bar_hex, right_bar_hex, right_tol, right_tol
-            )
-
-        # Normal fallback for right
-        if right_bar_center is None:
-            left_bar_center, right_bar_center = self._find_bar_edges(
-                img, left_bar_hex, left_bar_hex, left_tol, left_tol
-            )
-
+            left_bar_center, right_bar_center = self._find_bar_edges(img, right_bar_hex, right_bar_hex, right_tol, right_tol)
+        elif right_bar_center is None:
+            left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, left_bar_hex, left_tol, left_tol)
         return fish_center, left_bar_center, right_bar_center
     # PID-related
     def _get_pid_gains(self, inside_bar=False):
@@ -2642,16 +2516,11 @@ class App(CTk):
         time.sleep(delay)  # wait for cast to register in fisch
     def _execute_cast_perfect(self):
         """
-        V2 + V3 Hybrid:
-        - Uses threaded capture (V3)
-        - Uses Y-distance logic (V2)
-        - White detection priority:
-            1. Same Y row as green
-            2. Closest Y if none found
+        Scans for green and white Y coordinates and releases left click when
+        the top white Y reaches 95% of the area from green Y to bottom white Y.
         """
-
+        # Hold mouse
         mouse_controller.press(Button.left)
-
         # Get scale factor
         scale = self._get_scale_factor()
         # Shake area
@@ -2673,93 +2542,67 @@ class App(CTk):
         shake_top_s    = int(shake_top * scale)
         shake_right_s  = int(shake_right * scale)
         shake_bottom_s = int(shake_bottom * scale)
-
-        # --- SETTINGS ---
+        # SETTINGS 
         white_color     = self.vars["perfect_color2"].get()
         green_color     = self.vars["perfect_color"].get()
         white_tol       = int(self.vars["perfect_cast2_tolerance"].get())
         green_tol       = int(self.vars["perfect_cast_tolerance"].get())
-
         max_time        = float(self.vars["perfect_max_time"].get())
         perfect_thresh  = int(self.vars["perfect_threshold"].get())
         scan_delay      = float(self.vars["cast_scan_delay"].get())
-
         release_delay   = float(self.vars["perfect_release_delay"].get())
         if release_delay < 0:
             user_green_offset = abs(release_delay * 10)
             release_delay = 0
         else:
             user_green_offset = 0
-
-        # --- VELOCITY ---
+        # Calculate velocity and start capture thread
         prev_white_y = None
         green_offset = 0
-
-        # --- CAPTURE THREAD ---
         stop_event = self._start_capture(scan_delay)
-
         start_time = time.time()
-
         if self.vars["fish_overlay"].get() == "Enabled":
             self.fish_overlay.show()
-
-        # ================= LOOP =================
+        # Perfect Cast Loop
         while self.macro_running:
-
             if not self._cap_event.wait(timeout=0.5):
                 continue
-
             with self._cap_lock:
                 frame = self._cap_frame
                 self._cap_event.clear()
-
             if frame is None:
                 stop_event.set()
                 return
-
             region = frame[shake_top_s:shake_bottom_s, shake_left_s:shake_right_s]
-
             if region.size == 0:
                 if time.time() - start_time > max_time:
                     break
                 continue
-
             self.fish_overlay.clear()
-
-            # --- GREEN ---
+            # GREEN 
             green_pixels = self._pixel_search(region, green_color, green_tol)
             if not green_pixels:
                 if time.time() - start_time > max_time:
                     break
                 continue
-
             # Use lowest green (V2 behavior)
             green_x, green_y = max(green_pixels, key=lambda p: p[1])
-
             # Apply offset
             green_y += user_green_offset
-
-            # --- WHITE ---
+            # WHITE 
             white_pixels = self._pixel_search(region, white_color, white_tol)
             if not white_pixels:
                 continue
-
-            # ===== PRIORITY 1: SAME ROW =====
+            # PRIORITY 1: SAME ROW 
             same_row = [wp for wp in white_pixels if wp[1] == green_y]
-
             if same_row:
                 # Stable pick
                 white_x = int(np.median([x for x, _ in same_row]))
                 white_y = green_y
-
             else:
-                # ===== PRIORITY 2: CLOSEST Y =====
-                white_x, white_y = min(
-                    white_pixels,
-                    key=lambda p: abs(p[1] - green_y)
-                )
-
-            # --- VELOCITY ---
+                # PRIORITY 2: CLOSEST Y 
+                white_x, white_y = min(white_pixels, key=lambda p: abs(p[1] - green_y))
+            # VELOCITY 
             if self.vars["release_method"].get() == "Velocity-based":
                 if prev_white_y is not None:
                     dy = white_y - prev_white_y
@@ -2767,31 +2610,20 @@ class App(CTk):
 
                 prev_white_y = white_y
                 green_y += green_offset
-
-            # --- OVERLAY ---
+            # OVERLAY 
             if self.vars["fish_overlay"].get() == "Enabled":
                 gy_canvas = int((green_y / shake_height) * 60)
                 wy_canvas = int((white_y / shake_height) * 60)
-
-                self.after(0, lambda y=gy_canvas: self.fish_overlay.draw(
-                    bar_center=y, box_size=15, color="green", canvas_offset=0
-                ))
-
-                self.after(0, lambda y=wy_canvas: self.fish_overlay.draw(
-                    bar_center=y, box_size=30, color="white", canvas_offset=0
-                ))
-
-            # --- RELEASE CONDITION (V2 STYLE) ---
+                self.after(0, lambda y=gy_canvas: self.fish_overlay.draw( bar_center=y, box_size=15, color="green", canvas_offset=0 ))
+                self.after(0, lambda y=wy_canvas: self.fish_overlay.draw( bar_center=y, box_size=30, color="white", canvas_offset=0 ))
+            # RELEASE CONDITION (V2 STYLE) 
             distance = abs(green_y - white_y)
-
             if distance < perfect_thresh:
                 time.sleep(release_delay)
                 break
-
             if time.time() - start_time > max_time:
                 break
-
-        # --- CLEANUP ---
+        # CLEANUP 
         stop_event.set()
         mouse_controller.release(Button.left)
     def _execute_shake_click(self):
@@ -2816,8 +2648,6 @@ class App(CTk):
             shake_top = int(self.SCREEN_HEIGHT * 0.0925)
             shake_right = int(self.SCREEN_WIDTH * 0.8958)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
-            shake_x = int(self.SCREEN_WIDTH * 0.5)
-            shake_y = int(self.SCREEN_HEIGHT * 0.3)
         # Fish area
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
@@ -2825,15 +2655,11 @@ class App(CTk):
             fish_top    = fish["y"]
             fish_right  = fish["x"] + fish["width"]
             fish_bottom = fish["y"] + fish["height"]
-            fish_width = fish["width"]
-            fish_height = fish["height"]
         else:
             fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
             fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
             fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
             fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
-            fish_width = fish_right - fish_left
-            fish_height = fish_bottom - fish_top
         # Friend area
         friend = self.bar_areas.get("friend")
         if isinstance(friend, dict):
@@ -2879,11 +2705,9 @@ class App(CTk):
             # Grab full screen then crop
             if not self._cap_event.wait(timeout=0.5):
                 continue
-
             with self._cap_lock:
                 frame = self._cap_frame
                 self._cap_event.clear()
-
             if frame is None:
                 stop_event.set()
                 return
@@ -2898,7 +2722,6 @@ class App(CTk):
                 screen_x = shake_left + x
                 screen_y = shake_top + y
                 self._click_at(screen_x, screen_y, shake_clicks)
-
             # 2. Fish detection (Multiple Methods)
             detected = False
             while detected == False and self.macro_running:
@@ -2909,15 +2732,9 @@ class App(CTk):
                 if detection_area is None:
                     break
                 if detection_method == "Friend Area":
-                    friend_x = self._find_color_center(
-                        detection_area, "#9bff9b", tolerance
-                    )
-                fish_x = self._find_color_center(
-                    detection_area, fish_hex, tolerance
-                )
-                bar_x = self._find_color_center(
-                    detection_area, bar_hex, bar_tolerance
-                )
+                    friend_x = self._find_color_center( detection_area, "#9bff9b", tolerance )
+                fish_x = self._find_color_center( detection_area, fish_hex, tolerance )
+                bar_x = self._find_color_center( detection_area, bar_hex, bar_tolerance )
                 if detection_method == "Friend Area":
                     if not friend_x:
                         detected = True
@@ -3007,11 +2824,9 @@ class App(CTk):
                 # Grab full screen then crop
                 if not self._cap_event.wait(timeout=0.5):
                     continue
-
                 with self._cap_lock:
                     frame = self._cap_frame
                     self._cap_event.clear()
-
                 if frame is None:
                     stop_event.set()
                     return
@@ -3022,15 +2837,9 @@ class App(CTk):
                 if detection_area is None:
                     break
                 if detection_method == "Friend Area":
-                    friend_x = self._find_color_center(
-                        detection_area, "#9bff9b", tolerance
-                    )
-                fish_x = self._find_color_center(
-                    detection_area, fish_hex, tolerance
-                )
-                bar_x = self._find_color_center(
-                    detection_area, bar_hex, bar_tolerance
-                )
+                    friend_x = self._find_color_center( detection_area, "#9bff9b", tolerance )
+                fish_x = self._find_color_center( detection_area, fish_hex, tolerance )
+                bar_x = self._find_color_center( detection_area, bar_hex, bar_tolerance )
                 if detection_method == "Friend Area":
                     if not friend_x:
                         detected = True
@@ -3068,16 +2877,12 @@ class App(CTk):
             shake_top    = shake["y"]
             shake_right  = shake["x"] + shake["width"]
             shake_bottom = shake["y"] + shake["height"]
-            shake_x = int((shake_left + shake_right) / 2)
-            shake_y = int((shake_top + shake_bottom) / 2)
         else:
             # fallback (old ratio logic)
             shake_left = int(self.SCREEN_WIDTH * 0.1041)
             shake_top = int(self.SCREEN_HEIGHT * 0.0925)
             shake_right = int(self.SCREEN_WIDTH * 0.8958)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
-            shake_x = int(self.SCREEN_WIDTH * 0.5)
-            shake_y = int(self.SCREEN_HEIGHT * 0.3)
         # Fish area
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):

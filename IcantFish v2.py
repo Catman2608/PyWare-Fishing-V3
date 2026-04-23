@@ -1919,7 +1919,7 @@ class App(CTk):
 
         bar_x_coords = None
 
-        # --- LEFT BAR COLOR ---
+        # LEFT BAR COLOR 
         if left_hex is not None:
             lower_l = left_bgr - tol_l
             upper_l = left_bgr + tol_l
@@ -1930,7 +1930,7 @@ class App(CTk):
             if left_indices.size > 0:
                 bar_x_coords = left_indices
 
-        # --- RIGHT BAR COLOR ---
+        # RIGHT BAR COLOR 
         if right_hex is not None:
             lower_r = right_bgr - tol_r
             upper_r = right_bgr + tol_r
@@ -1944,7 +1944,7 @@ class App(CTk):
                 else:
                     bar_x_coords = right_indices
 
-        # --- FINAL EDGE EXTRACTION ---
+        # FINAL EDGE EXTRACTION 
         if bar_x_coords is not None and bar_x_coords.size > 0:
             bar_left_x = int(np.min(bar_x_coords))
             bar_right_x = int(np.max(bar_x_coords))
@@ -2225,7 +2225,7 @@ class App(CTk):
 
         current_time = time.time()
 
-        # ---- Handle missing arrow ----
+        # - Handle missing arrow -
         if arrow_centroid_x is None:
             if self.last_known_box_center_x is not None:
                 return self.last_known_box_center_x, self.last_left_x, self.last_right_x
@@ -2236,23 +2236,23 @@ class App(CTk):
             
             return None, None, None
 
-        # ---- Detect state swap ----
+        # - Detect state swap -
         state_swapped = (
             self.last_holding_state is not None and 
             is_holding != self.last_holding_state
         )
 
-        # ---- Recalculate box size when swapped ----
+        # - Recalculate box size when swapped -
         if state_swapped and self.last_indicator_x is not None:
             new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
             if new_box_size >= 10:
                 self.estimated_box_length = new_box_size
 
-        # ---- Default box size ----
+        # - Default box size -
         if self.estimated_box_length is None or self.estimated_box_length <= 0:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # ---- Position the box ----
+        # - Position the box -
         if is_holding:
             # arrow on RIGHT
             self.last_right_x = float(arrow_centroid_x)
@@ -2262,7 +2262,7 @@ class App(CTk):
             self.last_left_x = float(arrow_centroid_x)
             self.last_right_x = self.last_left_x + self.estimated_box_length
 
-        # ---- Clamp to capture bounds ----
+        # - Clamp to capture bounds -
         if self.last_left_x < 0:
             self.last_left_x = 0.0
             self.last_right_x = self.estimated_box_length
@@ -2271,12 +2271,12 @@ class App(CTk):
             self.last_right_x = float(capture_width)
             self.last_left_x = self.last_right_x - self.estimated_box_length
 
-        # ---- Calculate center ----
+        # - Calculate center -
         box_center = (self.last_left_x + self.last_right_x) / 2.0
         self.last_known_box_center_x = box_center
         self.last_known_box_timestamp = current_time
 
-        # ---- Update state ----
+        # - Update state -
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
@@ -2505,14 +2505,14 @@ class App(CTk):
             self.set_overlay_status(1, f"Current cycle: {cycle}")
             # Reconnect every X cycles if enabled
             # if self.vars["auto_reconnect"].get() == "on":
-            #     # roblox_state = self.check_roblox_connection()
-            #     if roblox_state == False:
-            #         link = self.vars["reconnect_link"].get()
-            #         self.set_overlay_status(0, "Process: Reconnecting")
-            #         self.set_overlay_status(1, link)
-            #         self.send_discord_webhook(f"**Loop Failed**", f"Reconnecting...")
-            #         self.after(0, lambda: self.open_link(link))
-            #         time.sleep(30)
+            #   # roblox_state = self.check_roblox_connection()
+            #   if roblox_state == False:
+            #       link = self.vars["reconnect_link"].get()
+            #       self.set_overlay_status(0, "Process: Reconnecting")
+            #       self.set_overlay_status(1, link)
+            #       self.send_discord_webhook(f"**Loop Failed**", f"Reconnecting...")
+            #       self.after(0, lambda: self.open_link(link))
+            #       time.sleep(30)
             # Send Discord Webhook
             self.send_discord_webhook(f"**Loop Completed**", f"Loop #{cycle}")
             # Check Totem
@@ -2684,7 +2684,7 @@ class App(CTk):
             shake_right  = int(self.SCREEN_WIDTH * 0.8562)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_height = shake_bottom - shake_top
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2916,7 +2916,7 @@ class App(CTk):
     def _execute_shake_navigation(self):
         """Spams the enter key until fish detection is found (ICF V1 logic)"""
         self.set_status("Shake Mode: Navigation")
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -3005,9 +3005,9 @@ class App(CTk):
                 return  # exit shake cleanly
             attempts += 1
             time.sleep(scan_delay)
-    # ------------------------------------------------------------------
+    # 
     # Capture-thread helpers
-    # ------------------------------------------------------------------
+    # 
     def _grab_screen_region_cap(self, left, top, right, bottom, monitor_dict, thread_local):
         """
         Thread-safe screen grab for the dedicated capture thread.
@@ -3091,7 +3091,7 @@ class App(CTk):
         # Signal one last time so the logic thread can exit its wait
         self._cap_event.set()
 
-    # ------------------------------------------------------------------
+    # 
     def _enter_minigame(self, time_seconds):
         """
         Controls the bar minigame based on multiple factors.
@@ -3099,7 +3099,7 @@ class App(CTk):
         """
         # Reset PID state
         self._reset_pid_state()
-        # --- SHAKE AREA ---
+        # SHAKE AREA 
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -3116,7 +3116,7 @@ class App(CTk):
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_x = int(self.SCREEN_WIDTH * 0.5)
             shake_y = int(self.SCREEN_HEIGHT * 0.3)
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -3194,7 +3194,7 @@ class App(CTk):
                 mouse_controller.release(Button.left)
                 mouse_down = False
 
-        # --- Start dedicated capture thread ---
+        # Start dedicated capture thread 
         # Reset shared state so stale frames from a previous run are not used.
         with self._cap_lock:
             self._cap_fish_img = None
@@ -3448,7 +3448,7 @@ class App(CTk):
             elif controller_mode == 1:
                 # stopping STOPPING DISTANCE + MOVEMENT THRESHOLD
 
-                # --- Ensure bar and target exist ---
+                # Ensure bar and target exist 
                 if bar_center is None or fish_x is None:
                     release_mouse()
                     continue
@@ -3475,9 +3475,9 @@ class App(CTk):
                     self._stopping_initial_bar = None
                     self._stopping_ready = False
 
-                # -------------------------
+                # -
                 # Stabilization phase
-                # -------------------------
+                # -
                 if not self._stopping_ready:
 
                     # First stabilization
@@ -3503,9 +3503,9 @@ class App(CTk):
 
                         continue   # do not run stopping logic yet
 
-                    # -------------------------
+                    # -
                     # Movement threshold phase
-                    # -------------------------
+                    # -
                     target_moved = abs(fish_x - self._stopping_initial_target) > movement_threshold
                     bar_moved = abs(bar_center - self._stopping_initial_bar) > movement_threshold
 
@@ -3516,9 +3516,9 @@ class App(CTk):
                     else:
                         continue  # wait until movement occurs
 
-                # ==================================================
+                # 
                 # 2. stopping STOPPING DISTANCE CONTROLLER (ACTIVE MODE)
-                # ==================================================
+                # 
 
                 # Velocity smoothing coefficient
                 velocity_smoothing = float(self.vars["velocity_smoothing"].get())
@@ -3584,9 +3584,9 @@ class App(CTk):
                     release_mouse()
                     continue
 
-                # ---------------------
+                # 
                 # Main stopping-distance logic
-                # ---------------------
+                # 
                 if error < 0:   # bar left of target → move right
                     if abs(error) > (stopping_distance + cushion):
                         hold_mouse()

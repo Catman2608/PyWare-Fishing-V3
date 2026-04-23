@@ -57,7 +57,7 @@ def get_base_path():
 
 BASE_PATH = get_base_path()
 
-# ---- SINGLE SOURCE OF TRUTH ----
+# - SINGLE SOURCE OF TRUTH -
 if getattr(sys, 'frozen', False):
     # Running as compiled app
     if sys.platform == "darwin":
@@ -1849,7 +1849,7 @@ class App(CTk):
 
         bar_x_coords = None
 
-        # --- LEFT BAR COLOR ---
+        # LEFT BAR COLOR 
         if left_hex is not None:
             lower_l = left_bgr - tol_l
             upper_l = left_bgr + tol_l
@@ -1860,7 +1860,7 @@ class App(CTk):
             if left_indices.size > 0:
                 bar_x_coords = left_indices
 
-        # --- RIGHT BAR COLOR ---
+        # RIGHT BAR COLOR 
         if right_hex is not None:
             lower_r = right_bgr - tol_r
             upper_r = right_bgr + tol_r
@@ -1874,7 +1874,7 @@ class App(CTk):
                 else:
                     bar_x_coords = right_indices
 
-        # --- FINAL EDGE EXTRACTION ---
+        # FINAL EDGE EXTRACTION 
         if bar_x_coords is not None and bar_x_coords.size > 0:
             bar_left_x = int(np.min(bar_x_coords))
             bar_right_x = int(np.max(bar_x_coords))
@@ -1947,7 +1947,7 @@ class App(CTk):
 
         current_time = time.time()
 
-        # ---- Handle missing arrow ----
+        # - Handle missing arrow -
         if arrow_centroid_x is None:
             if self.last_known_box_center_x is not None:
                 return self.last_known_box_center_x, self.last_left_x, self.last_right_x
@@ -1958,23 +1958,23 @@ class App(CTk):
             
             return None, None, None
 
-        # ---- Detect state swap ----
+        # - Detect state swap -
         state_swapped = (
             self.last_holding_state is not None and 
             is_holding != self.last_holding_state
         )
 
-        # ---- Recalculate box size when swapped ----
+        # - Recalculate box size when swapped -
         if state_swapped and self.last_indicator_x is not None:
             new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
             if new_box_size >= 10:
                 self.estimated_box_length = new_box_size
 
-        # ---- Default box size ----
+        # - Default box size -
         if self.estimated_box_length is None or self.estimated_box_length <= 0:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # ---- Position the box ----
+        # - Position the box -
         if is_holding:
             # arrow on RIGHT
             self.last_right_x = float(arrow_centroid_x)
@@ -1984,7 +1984,7 @@ class App(CTk):
             self.last_left_x = float(arrow_centroid_x)
             self.last_right_x = self.last_left_x + self.estimated_box_length
 
-        # ---- Clamp to capture bounds ----
+        # - Clamp to capture bounds -
         if self.last_left_x < 0:
             self.last_left_x = 0.0
             self.last_right_x = self.estimated_box_length
@@ -1993,12 +1993,12 @@ class App(CTk):
             self.last_right_x = float(capture_width)
             self.last_left_x = self.last_right_x - self.estimated_box_length
 
-        # ---- Calculate center ----
+        # - Calculate center -
         box_center = (self.last_left_x + self.last_right_x) / 2.0
         self.last_known_box_center_x = box_center
         self.last_known_box_timestamp = current_time
 
-        # ---- Update state ----
+        # - Update state -
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
@@ -2275,7 +2275,7 @@ class App(CTk):
         shake_right_s  = int(shake_right * scale)
         shake_bottom_s = int(shake_bottom * scale)
 
-        # --- SETTINGS ---
+        # SETTINGS 
         white_color     = self.vars["perfect_color2"].get()
         green_color     = self.vars["perfect_color"].get()
         white_tol       = int(self.vars["perfect_cast2_tolerance"].get())
@@ -2292,11 +2292,11 @@ class App(CTk):
         else:
             user_green_offset = 0
 
-        # --- VELOCITY ---
+        # VELOCITY 
         prev_white_y = None
         green_offset = 0
 
-        # --- CAPTURE THREAD ---
+        # CAPTURE THREAD 
         stop_event = self._start_capture(scan_delay)
 
         start_time = time.time()
@@ -2304,7 +2304,7 @@ class App(CTk):
         if self.vars["fish_overlay"].get() == "Enabled":
             self.fish_overlay.show()
 
-        # ================= LOOP =================
+        # == LOOP ==
         while self.macro_running:
 
             if not self._cap_event.wait(timeout=0.5):
@@ -2327,7 +2327,7 @@ class App(CTk):
 
             self.fish_overlay.clear()
 
-            # --- GREEN ---
+            # GREEN 
             green_pixels = self._pixel_search(region, green_color, green_tol)
             if not green_pixels:
                 if time.time() - start_time > max_time:
@@ -2340,12 +2340,12 @@ class App(CTk):
             # Apply offset
             green_y += user_green_offset
 
-            # --- WHITE ---
+            # WHITE 
             white_pixels = self._pixel_search(region, white_color, white_tol)
             if not white_pixels:
                 continue
 
-            # ===== PRIORITY 1: SAME ROW =====
+            # PRIORITY 1: SAME ROW 
             same_row = [wp for wp in white_pixels if wp[1] == green_y]
 
             if same_row:
@@ -2354,13 +2354,13 @@ class App(CTk):
                 white_y = green_y
 
             else:
-                # ===== PRIORITY 2: CLOSEST Y =====
+                # PRIORITY 2: CLOSEST Y 
                 white_x, white_y = min(
                     white_pixels,
                     key=lambda p: abs(p[1] - green_y)
                 )
 
-            # --- VELOCITY ---
+            # VELOCITY 
             if self.vars["release_method"].get() == "Velocity-based":
                 if prev_white_y is not None:
                     dy = white_y - prev_white_y
@@ -2369,7 +2369,7 @@ class App(CTk):
                 prev_white_y = white_y
                 green_y += green_offset
 
-            # --- OVERLAY ---
+            # OVERLAY 
             if self.vars["fish_overlay"].get() == "Enabled":
                 gy_canvas = int((green_y / shake_height) * 60)
                 wy_canvas = int((white_y / shake_height) * 60)
@@ -2382,7 +2382,7 @@ class App(CTk):
                     bar_center=y, box_size=30, color="white", canvas_offset=0
                 ))
 
-            # --- RELEASE CONDITION (V2 STYLE) ---
+            # RELEASE CONDITION (V2 STYLE) 
             distance = abs(green_y - white_y)
 
             if distance < perfect_thresh:
@@ -2392,7 +2392,7 @@ class App(CTk):
             if time.time() - start_time > max_time:
                 break
 
-        # --- CLEANUP ---
+        # CLEANUP 
         stop_event.set()
         mouse_controller.release(Button.left)
     def _execute_shake_click(self):

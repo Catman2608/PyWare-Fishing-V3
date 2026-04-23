@@ -253,7 +253,7 @@ class App(CTk):
         parent.grid_rowconfigure(0, weight=1)
         parent.grid_columnconfigure(0, weight=1)
 
-        #  Configs 
+        # Configs 
         configs = CTkFrame(scroll, border_width=2)
         configs.grid(row=0, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(configs, text="Basic Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
@@ -344,7 +344,7 @@ class App(CTk):
                                      variable=fish_overlay_var, onvalue="on", offvalue="off")
         fish_overlay_cb.grid(row=3, column=0, padx=12, pady=8, sticky="w")
 
-        #  Casting 
+        # Casting 
         casting = CTkFrame(
             scroll,
             border_width=2
@@ -362,7 +362,7 @@ class App(CTk):
             onvalue="on",
             offvalue="off"
         ).grid(row=1, column=0, padx=12, pady=8, sticky="w")
-        # ---- Cast duration ----
+        # - Cast duration -
         CTkLabel(casting, text="Cast duration").grid(
             row=2, column=0, padx=12, pady=8, sticky="w"
         )
@@ -378,7 +378,7 @@ class App(CTk):
         cast_duration_entry.grid(row=2, column=1, padx=12, pady=8, sticky="w")
 
 
-        # ---- Delay after casting ----
+        # - Delay after casting -
         CTkLabel(casting, text="Delay after casting").grid(
             row=3, column=0, padx=12, pady=8, sticky="w"
         )
@@ -460,7 +460,7 @@ class App(CTk):
             border_width=2
         )
         pfc2_settings.grid(row=2, column=0, padx=20, pady=20, sticky="nw")
-        # ---- Perfect cast tolerance ----
+        # - Perfect cast tolerance -
         CTkLabel(pfc2_settings, text="Perfect Cast Release Options", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
         CTkLabel(pfc2_settings, text="Green (Perfect Cast) Tolerance:").grid(
             row=1, column=0, padx=12, pady=10, sticky="w"
@@ -533,7 +533,7 @@ class App(CTk):
         )
         shake_configuration.grid(row=0, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(shake_configuration, text="Shake Configuration", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
-        # ---- Shake mode ----
+        # - Shake mode -
         CTkLabel(shake_configuration, text="Shake mode:").grid(
             row=1, column=0, padx=12, pady=10, sticky="w"
         )
@@ -550,7 +550,7 @@ class App(CTk):
         shake_cb.grid(row=1, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["shake_mode"] = shake_cb
 
-        # ---- Shake tolerance ----
+        # - Shake tolerance -
         CTkLabel(shake_configuration, text="Click Shake Color Tolerance:").grid(
             row=2, column=0, padx=12, pady=10, sticky="w"
         )
@@ -564,7 +564,7 @@ class App(CTk):
             textvariable=shake_tolerance_var
         ).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        # ---- Shake scan delay ----
+        # - Shake scan delay -
         CTkLabel(shake_configuration, text="Shake Scan Delay:").grid(
             row=3, column=0, padx=12, pady=10, sticky="w"
         )
@@ -578,7 +578,7 @@ class App(CTk):
             textvariable=shake_scan_delay_var
         ).grid(row=3, column=1, padx=12, pady=10, sticky="w")
 
-        # ---- Shake failsafe ----
+        # - Shake failsafe -
         CTkLabel(shake_configuration, text="Shake Failsafe (attempts):").grid(
             row=4, column=0, padx=12, pady=10, sticky="w"
         )
@@ -1769,11 +1769,11 @@ class App(CTk):
         fish_template_h = fish_template.shape[0]
         bar_template_h  = bar_template.shape[0]
 
-        # ---- Fish region (remove bottom bar part) ----
+        # - Fish region (remove bottom bar part) -
         fish_region = img[:img_h - bar_template_h - 10, :]
         fish_x = self._find_template(fish_region, fish_template, 0.8)
 
-        # ---- Bar region (remove top fish part) ----
+        # - Bar region (remove top fish part) -
         bar_region = img[fish_template_h + 10:, :]
         left_x = self._find_template(bar_region, bar_template, 0.8)
         right_x = self._find_template(bar_region, self.templates["right_bar"], 0.8)
@@ -1935,7 +1935,7 @@ class App(CTk):
         time.sleep(delay)  # wait for cast to register
     def _execute_shake_click(self):
         self.set_status("Shake Mode: Click")
-        # --- SHAKE AREA ---
+        # SHAKE AREA 
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -1949,7 +1949,7 @@ class App(CTk):
             shake_right  = int(self.SCREEN_WIDTH * 0.7813)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
 
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2027,7 +2027,7 @@ class App(CTk):
 
     def _execute_shake_navigation(self):
         self.set_status("Shake Mode: Navigation")
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2090,7 +2090,7 @@ class App(CTk):
             time.sleep(scan_delay)
 
     def _enter_minigame(self):
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2103,7 +2103,7 @@ class App(CTk):
             fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
             fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
         # Load bar/fish images
-        # --- PREPARE TEMPLATES ONCE ---
+        # PREPARE TEMPLATES ONCE 
         for key in ["fish", "left_bar", "right_bar"]:
             template = self.templates.get(key)
 
@@ -2164,10 +2164,10 @@ class App(CTk):
             else:
                 fish_x, left_x, right_x = self._do_pixel_search(img)
 
-            # ---- Arrow ----
+            # - Arrow -
             arrow_center = self._find_color_center(img, arrow_hex, arrow_tol)
 
-            # ---- FISH NOT FOUND ----
+            # - FISH NOT FOUND -
             if fish_x is not None:
                 fish_miss_count = 0
             else:
@@ -2182,9 +2182,9 @@ class App(CTk):
 
                 time.sleep(0.02)
                 continue
-            # ---- CLEAR MINIGAME ----
+            # - CLEAR MINIGAME -
             self.clear_minigame()
-            # ---- BARS NOT FOUND ----
+            # - BARS NOT FOUND -
             bars_found = left_x is not None and right_x is not None
             fish_x = fish_x + fish_left
             if bars_found and left_x is not None and right_x is not None:

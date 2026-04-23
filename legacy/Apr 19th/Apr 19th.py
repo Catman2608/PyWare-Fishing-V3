@@ -56,7 +56,7 @@ def get_base_path():
 
 BASE_PATH = get_base_path()
 
-# ---- SINGLE SOURCE OF TRUTH ----
+# - SINGLE SOURCE OF TRUTH -
 if getattr(sys, 'frozen', False):
     # Running as compiled app
     if sys.platform == "darwin":
@@ -1817,7 +1817,7 @@ class App(CTk):
 
         bar_x_coords = None
 
-        # --- LEFT BAR COLOR ---
+        # LEFT BAR COLOR 
         if left_hex is not None:
             lower_l = left_bgr - tol_l
             upper_l = left_bgr + tol_l
@@ -1828,7 +1828,7 @@ class App(CTk):
             if left_indices.size > 0:
                 bar_x_coords = left_indices
 
-        # --- RIGHT BAR COLOR ---
+        # RIGHT BAR COLOR 
         if right_hex is not None:
             lower_r = right_bgr - tol_r
             upper_r = right_bgr + tol_r
@@ -1842,7 +1842,7 @@ class App(CTk):
                 else:
                     bar_x_coords = right_indices
 
-        # --- FINAL EDGE EXTRACTION ---
+        # FINAL EDGE EXTRACTION 
         if bar_x_coords is not None and bar_x_coords.size > 0:
             bar_left_x = int(np.min(bar_x_coords))
             bar_right_x = int(np.max(bar_x_coords))
@@ -1915,7 +1915,7 @@ class App(CTk):
 
         current_time = time.time()
 
-        # ---- Handle missing arrow ----
+        # - Handle missing arrow -
         if arrow_centroid_x is None:
             if self.last_known_box_center_x is not None:
                 return self.last_known_box_center_x, self.last_left_x, self.last_right_x
@@ -1926,23 +1926,23 @@ class App(CTk):
             
             return None, None, None
 
-        # ---- Detect state swap ----
+        # - Detect state swap -
         state_swapped = (
             self.last_holding_state is not None and 
             is_holding != self.last_holding_state
         )
 
-        # ---- Recalculate box size when swapped ----
+        # - Recalculate box size when swapped -
         if state_swapped and self.last_indicator_x is not None:
             new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
             if new_box_size >= 10:
                 self.estimated_box_length = new_box_size
 
-        # ---- Default box size ----
+        # - Default box size -
         if self.estimated_box_length is None or self.estimated_box_length <= 0:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # ---- Position the box ----
+        # - Position the box -
         if is_holding:
             # arrow on RIGHT
             self.last_right_x = float(arrow_centroid_x)
@@ -1952,7 +1952,7 @@ class App(CTk):
             self.last_left_x = float(arrow_centroid_x)
             self.last_right_x = self.last_left_x + self.estimated_box_length
 
-        # ---- Clamp to capture bounds ----
+        # - Clamp to capture bounds -
         if self.last_left_x < 0:
             self.last_left_x = 0.0
             self.last_right_x = self.estimated_box_length
@@ -1961,12 +1961,12 @@ class App(CTk):
             self.last_right_x = float(capture_width)
             self.last_left_x = self.last_right_x - self.estimated_box_length
 
-        # ---- Calculate center ----
+        # - Calculate center -
         box_center = (self.last_left_x + self.last_right_x) / 2.0
         self.last_known_box_center_x = box_center
         self.last_known_box_timestamp = current_time
 
-        # ---- Update state ----
+        # - Update state -
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
@@ -2314,7 +2314,7 @@ class App(CTk):
             shake_right  = int(self.SCREEN_WIDTH * 0.8562)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_height = shake_bottom - shake_top
-        # --- FISH AREA (for overlay canvas mapping) ---
+        # FISH AREA (for overlay canvas mapping) 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2347,7 +2347,7 @@ class App(CTk):
         prev_white_y = None
         green_offset = 0
 
-        # --- Start dedicated capture thread ---
+        # Start dedicated capture thread 
         self._cast_cap_img = None
         self._cast_cap_event.clear()
         cast_cap_thread = threading.Thread(
@@ -2375,7 +2375,7 @@ class App(CTk):
 
             self.clear_overlay()
 
-            # --- Find green pixels ---
+            # Find green pixels 
             green_pixels = self._pixel_search(frame, green_color, green_tolerance)
             if not green_pixels:
                 if time.time() - start_time > max_time:
@@ -2393,7 +2393,7 @@ class App(CTk):
             green_y_canvas  = int((green_y          / shake_height) * fish_width) + fish_top
             green_y_canvas2 = int((green_y_adjusted / shake_height) * fish_width) + fish_top
 
-            # --- Find white pixel on the SAME Y row as the green pixel ---
+            # Find white pixel on the SAME Y row as the green pixel 
             # Build a mask for whites, then filter to the row nearest green_y
             white_pixels = self._pixel_search(frame, white_color, white_tolerance)
             if not white_pixels:
@@ -2433,7 +2433,7 @@ class App(CTk):
                 self.after(0, lambda y=green_y_canvas2, top=fish_top: self.draw_overlay(bar_center=y, box_size=15, color="green", canvas_offset=top))
                 self.after(0, lambda _fx=white_y_canvas, _fl=fish_top: self.draw_overlay(bar_center=_fx, box_size=30, color="white", canvas_offset=_fl))
 
-            # --- Release condition: white X aligns with green X on the same Y ---
+            # Release condition: white X aligns with green X on the same Y 
             # Distance is now measured on X axis since both pixels share the same Y row
             distance = abs(green_x - white_x)
             if distance < perfect_threshold:
@@ -2569,7 +2569,7 @@ class App(CTk):
     def _execute_shake_navigation(self):
         """Spams the enter key until fish detection is found (ICF V1 logic)"""
         self.set_status("Shake Mode: Navigation")
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2659,7 +2659,7 @@ class App(CTk):
             attempts += 1
             time.sleep(scan_delay)
     def _enter_minigame(self):
-        # --- SHAKE AREA ---
+        # SHAKE AREA 
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -2676,7 +2676,7 @@ class App(CTk):
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_x = int(self.SCREEN_WIDTH * 0.5)
             shake_y = int(self.SCREEN_HEIGHT * 0.3)
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]

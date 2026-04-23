@@ -149,7 +149,7 @@ class App(CTk):
         fish_overlay_cb = CTkCheckBox(automation, text="Fish Overlay", 
                                      variable=fish_overlay_var, onvalue="on", offvalue="off")
         fish_overlay_cb.grid(row=2, column=0, padx=12, pady=8, sticky="w")
-        #  Configs 
+        # Configs 
         configs = CTkFrame(
             parent, fg_color="#222222",
             border_color="#4a90e2", border_width=2
@@ -182,7 +182,7 @@ class App(CTk):
             command=lambda: self.set_status("Press a key to rebind...")
         ).grid(row=1, column=1, padx=12, pady=12, sticky="w")
 
-        #  Casting 
+        # Casting 
         casting = CTkFrame(
             parent, fg_color="#222222",
             border_color="#4a90e2", border_width=2
@@ -200,7 +200,7 @@ class App(CTk):
             offvalue="off"
         ).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        # ---- Cast duration ----
+        # - Cast duration -
         CTkLabel(casting, text="Cast duration").grid(
             row=1, column=0, padx=12, pady=8, sticky="w"
         )
@@ -216,7 +216,7 @@ class App(CTk):
         cast_duration_entry.grid(row=1, column=1, padx=12, pady=8, sticky="w")
 
 
-        # ---- Delay after casting ----
+        # - Delay after casting -
         CTkLabel(casting, text="Delay after casting").grid(
             row=2, column=0, padx=12, pady=8, sticky="w"
         )
@@ -232,7 +232,7 @@ class App(CTk):
         casting_delay_entry.grid(row=2, column=1, padx=12, pady=8, sticky="w")
 
 
-        # ---- Perfect cast tolerance ----
+        # - Perfect cast tolerance -
         CTkLabel(casting, text="Perfect Cast Tolerance:").grid(
             row=3, column=0, padx=12, pady=10, sticky="w"
         )
@@ -321,7 +321,7 @@ class App(CTk):
         )
         frame.grid(row=0, column=0, padx=20, pady=20, sticky="nw")
 
-        # ---- Shake mode ----
+        # - Shake mode -
         CTkLabel(frame, text="Shake mode:").grid(
             row=0, column=0, padx=12, pady=10, sticky="w"
         )
@@ -338,7 +338,7 @@ class App(CTk):
         shake_cb.grid(row=0, column=1, padx=12, pady=10, sticky="w")
         self.comboboxes["shake_mode"] = shake_cb
 
-        # ---- Shake tolerance ----
+        # - Shake tolerance -
         CTkLabel(frame, text="Click Shake Color Tolerance:").grid(
             row=1, column=0, padx=12, pady=10, sticky="w"
         )
@@ -352,7 +352,7 @@ class App(CTk):
             textvariable=shake_tolerance_var
         ).grid(row=1, column=1, padx=12, pady=10, sticky="w")
 
-        # ---- Shake scan delay ----
+        # - Shake scan delay -
         CTkLabel(frame, text="Shake Scan Delay:").grid(
             row=2, column=0, padx=12, pady=10, sticky="w"
         )
@@ -366,7 +366,7 @@ class App(CTk):
             textvariable=shake_scan_delay_var
         ).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        # ---- Shake failsafe ----
+        # - Shake failsafe -
         CTkLabel(frame, text="Shake Failsafe (attempts):").grid(
             row=3, column=0, padx=12, pady=10, sticky="w"
         )
@@ -1393,7 +1393,7 @@ class App(CTk):
     def _execute_shake_navigation(self):
         self.set_status("Shake Mode: Navigation")
 
-        # --- Regions ---
+        # Regions 
         # macOS-safe coordinates
         fish_left = int(self.SCREEN_WIDTH / 3.3684)
         fish_top = int(self.SCREEN_HEIGHT / 1.2766)
@@ -1502,7 +1502,7 @@ class App(CTk):
             arrow_center = self._find_color_center(img, arrow_hex, arrow_tol)
             left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, right_bar_hex, left_tol, right_tol)
 
-            # ---- FISH NOT FOUND ----
+            # - FISH NOT FOUND -
             if not fish_center:
                 fish_miss_count += 1
                 release_mouse()
@@ -1517,7 +1517,7 @@ class App(CTk):
             else:
                 fish_miss_count = 0
 
-            # ---- BARS NOT FOUND ----
+            # - BARS NOT FOUND -
             bars_found = left_bar_center is not None and right_bar_center is not None
 
             fish_x = fish_center[0] + fish_left
@@ -1578,7 +1578,7 @@ class App(CTk):
                             self.draw_bar_minigame(bar_center=bar_center - 50, box_size=5, color="green", canvas_offset=fish_left)
                         release_mouse()
 
-            # ---- ARROW FALLBACK (IRUS-style box estimation) ----
+            # - ARROW FALLBACK (IRUS-style box estimation) -
             elif arrow_center:
                 # Use arrow to estimate bar center (IRUS 675 logic)
                 capture_width = fish_right - fish_left
@@ -1632,7 +1632,7 @@ class App(CTk):
                     if self.vars["fish_overlay"].get() == "on":
                         self.draw_bar_minigame(bar_center=arrow_center - 50, box_size=5, color="yellow", canvas_offset=fish_left)
                     release_mouse()
-            # ---- NOTHING FOUND ----
+            # - NOTHING FOUND -
             else:
                 release_mouse()
 

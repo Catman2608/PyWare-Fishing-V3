@@ -1721,7 +1721,7 @@ class App(CTk):
 
         bar_x_coords = None
 
-        # --- LEFT BAR COLOR ---
+        # LEFT BAR COLOR 
         if left_hex is not None:
             lower_l = left_bgr - tol_l
             upper_l = left_bgr + tol_l
@@ -1732,7 +1732,7 @@ class App(CTk):
             if left_indices.size > 0:
                 bar_x_coords = left_indices
 
-        # --- RIGHT BAR COLOR ---
+        # RIGHT BAR COLOR 
         if right_hex is not None:
             lower_r = right_bgr - tol_r
             upper_r = right_bgr + tol_r
@@ -1746,7 +1746,7 @@ class App(CTk):
                 else:
                     bar_x_coords = right_indices
 
-        # --- FINAL EDGE EXTRACTION ---
+        # FINAL EDGE EXTRACTION 
         if bar_x_coords is not None and bar_x_coords.size > 0:
             bar_left_x = int(np.min(bar_x_coords))
             bar_right_x = int(np.max(bar_x_coords))
@@ -2353,7 +2353,7 @@ class App(CTk):
             shake_right  = int(self.SCREEN_WIDTH * 0.7813)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_height = shake_bottom - shake_top
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2450,7 +2450,7 @@ class App(CTk):
         time.sleep(delay)  # wait for cast to register in fisch
     def _execute_shake_click(self):
         self.set_status("Shake Mode: Click")
-        # --- SHAKE AREA ---
+        # SHAKE AREA 
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -2463,7 +2463,7 @@ class App(CTk):
             shake_top    = int(self.SCREEN_HEIGHT * 0.162)
             shake_right  = int(self.SCREEN_WIDTH * 0.7813)
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2541,7 +2541,7 @@ class App(CTk):
             time.sleep(scan_delay)
     def _execute_shake_navigation(self):
         self.set_status("Shake Mode: Navigation")
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]
@@ -2604,7 +2604,7 @@ class App(CTk):
             attempts += 1
             time.sleep(scan_delay)
     def _enter_minigame(self):
-        # --- SHAKE AREA ---
+        # SHAKE AREA 
         shake = self.bar_areas.get("shake")
         if isinstance(shake, dict):
             shake_left   = shake["x"]
@@ -2621,7 +2621,7 @@ class App(CTk):
             shake_bottom = int(self.SCREEN_HEIGHT * 0.74)
             shake_x = int(self.SCREEN_WIDTH * 0.5)
             shake_y = int(self.SCREEN_HEIGHT * 0.3)
-        # --- FISH AREA ---
+        # FISH AREA 
         fish = self.bar_areas.get("fish")
         if isinstance(fish, dict):
             fish_left   = fish["x"]

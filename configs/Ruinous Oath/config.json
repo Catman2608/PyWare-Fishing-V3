@@ -14,7 +14,7 @@
     "left_tolerance": "16",
     "right_tolerance": "20",
     "arrow_tolerance": "8",
-    "fish_tolerance": "8",
+    "fish_tolerance": "4",
     "shake_color": "#FFFFFF",
     "shake_tolerance": "5",
     "note_box_color": "#00990c",

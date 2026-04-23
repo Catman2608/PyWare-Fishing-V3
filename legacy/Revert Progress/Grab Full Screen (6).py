@@ -56,7 +56,7 @@ def get_base_path():
 
 BASE_PATH = get_base_path()
 
-# ---- SINGLE SOURCE OF TRUTH ----
+# - SINGLE SOURCE OF TRUTH -
 if getattr(sys, 'frozen', False):
     # Running as compiled app
     if sys.platform == "darwin":
@@ -1785,7 +1785,7 @@ class App(CTk):
 
         bar_x_coords = None
 
-        # --- LEFT BAR COLOR ---
+        # LEFT BAR COLOR 
         if left_hex is not None:
             lower_l = left_bgr - tol_l
             upper_l = left_bgr + tol_l
@@ -1796,7 +1796,7 @@ class App(CTk):
             if left_indices.size > 0:
                 bar_x_coords = left_indices
 
-        # --- RIGHT BAR COLOR ---
+        # RIGHT BAR COLOR 
         if right_hex is not None:
             lower_r = right_bgr - tol_r
             upper_r = right_bgr + tol_r
@@ -1810,7 +1810,7 @@ class App(CTk):
                 else:
                     bar_x_coords = right_indices
 
-        # --- FINAL EDGE EXTRACTION ---
+        # FINAL EDGE EXTRACTION 
         if bar_x_coords is not None and bar_x_coords.size > 0:
             bar_left_x = int(np.min(bar_x_coords))
             bar_right_x = int(np.max(bar_x_coords))
@@ -1883,7 +1883,7 @@ class App(CTk):
 
         current_time = time.time()
 
-        # ---- Handle missing arrow ----
+        # - Handle missing arrow -
         if arrow_centroid_x is None:
             if self.last_known_box_center_x is not None:
                 return self.last_known_box_center_x, self.last_left_x, self.last_right_x
@@ -1894,23 +1894,23 @@ class App(CTk):
             
             return None, None, None
 
-        # ---- Detect state swap ----
+        # - Detect state swap -
         state_swapped = (
             self.last_holding_state is not None and 
             is_holding != self.last_holding_state
         )
 
-        # ---- Recalculate box size when swapped ----
+        # - Recalculate box size when swapped -
         if state_swapped and self.last_indicator_x is not None:
             new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
             if new_box_size >= 10:
                 self.estimated_box_length = new_box_size
 
-        # ---- Default box size ----
+        # - Default box size -
         if self.estimated_box_length is None or self.estimated_box_length <= 0:
             self.estimated_box_length = min(capture_width * 0.3, 200)
 
-        # ---- Position the box ----
+        # - Position the box -
         if is_holding:
             # arrow on RIGHT
             self.last_right_x = float(arrow_centroid_x)
@@ -1920,7 +1920,7 @@ class App(CTk):
             self.last_left_x = float(arrow_centroid_x)
             self.last_right_x = self.last_left_x + self.estimated_box_length
 
-        # ---- Clamp to capture bounds ----
+        # - Clamp to capture bounds -
         if self.last_left_x < 0:
             self.last_left_x = 0.0
             self.last_right_x = self.estimated_box_length
@@ -1929,12 +1929,12 @@ class App(CTk):
             self.last_right_x = float(capture_width)
             self.last_left_x = self.last_right_x - self.estimated_box_length
 
-        # ---- Calculate center ----
+        # - Calculate center -
         box_center = (self.last_left_x + self.last_right_x) / 2.0
         self.last_known_box_center_x = box_center
         self.last_known_box_timestamp = current_time
 
-        # ---- Update state ----
+        # - Update state -
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
