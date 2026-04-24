@@ -38,20 +38,48 @@ if sys.platform == "win32":
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 elif sys.platform == "darwin":
-    import Quartz # If you're on macOS remove the first hashtag
-    def _move_mouse(x, y):
-        point = Quartz.CGPointMake(float(x), float(y))
-        Quartz.CGWarpMouseCursorPosition(point)
-        Quartz.CGAssociateMouseAndMouseCursorPosition(True)
+# Load CoreGraphics directly via ctypes [cite: 11]
+    cg_path = ctypes.util.find_library("CoreGraphics")
+    core_graphics = ctypes.CDLL(cg_path)
+
+    # Define necessary Carbon/CoreGraphics constants
+    K_CG_EVENT_LEFT_MOUSE_DOWN = 5
+    K_CG_EVENT_LEFT_MOUSE_UP = 6
+    K_CG_MOUSE_BUTTON_LEFT = 0
+    K_CG_HID_EVENT_TAP = 0
+
+    # Ctypes Structure for CGPoint
+    class CGPoint(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
 
     def _mouse_event(event_type, x, y):
-        event = Quartz.CGEventCreateMouseEvent(
-            None,
-            event_type,
-            Quartz.CGPointMake(float(x), float(y)),
-            Quartz.kCGMouseButtonLeft
+        """
+        Zero-dependency mouse events using CoreGraphics via ctypes[cite: 12].
+        """
+        point = CGPoint(float(x), float(y))
+        
+        # CGEventCreateMouseEvent(allocator, mouseType, mouseCursorPosition, mouseButton)
+        event = core_graphics.CGEventCreateMouseEvent(
+            None, 
+            event_type, 
+            point, 
+            K_CG_MOUSE_BUTTON_LEFT
         )
-        Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+        
+        # CGEventPost(tap, event)
+        core_graphics.CGEventPost(K_CG_HID_EVENT_TAP, event)
+        
+        # Clean up memory (CFRelease)
+        if event:
+            core_graphics.CFRelease(event)
+
+    def click(x, y):
+        _mouse_event(K_CG_EVENT_LEFT_MOUSE_DOWN, x, y)
+        _mouse_event(K_CG_EVENT_LEFT_MOUSE_UP, x, y)
+
+    def _move_mouse(x, y):
+        point = CGPoint(float(x), float(y))
+        core_graphics.CGWarpMouseCursorPosition(point)
 # Get all required paths
 def get_base_path():
     """Unified base directory for app data."""
@@ -950,17 +978,15 @@ class App(CTk):
         self.tabs.add("Basic")
         self.tabs.add("Automation")
         self.tabs.add("Utilities")
-        self.tabs.add("Advanced")
 
         # Build tabs
         self.build_basic_tab(self.tabs.tab("Basic"))
         self.build_automation_tab(self.tabs.tab("Automation"))
         self.build_utilities_tab(self.tabs.tab("Utilities"))
-        self.build_advanced_tab(self.tabs.tab("Advanced"))
 
         # Load last config and reapply hotkeys
         self.load_last_config()
-        self._apply_hotkeys_from_vars()   # ✅ ADD THIS
+        self._apply_hotkeys_from_vars()
 
         # Grid behavior
         self.grid_columnconfigure(0, weight=1)
@@ -1308,6 +1334,11 @@ class App(CTk):
         restart_cb.grid(row=2, column=3, padx=12, pady=10, sticky="w")
         self.comboboxes["restart_method"] = restart_cb
 
+        CTkLabel(shake_configuration, text="Animation Delay (seconds):").grid(row=3, column=2, padx=12, pady=10, sticky="w" )
+        bait_delay_var = StringVar(value="0.0")
+        self.vars["bait_delay"] = bait_delay_var
+        CTkEntry(shake_configuration, width=120, textvariable=bait_delay_var).grid(row=3, column=3, padx=12, pady=10, sticky="w")
+
         ratio_settings = CTkFrame(scroll, border_width=2)
         ratio_settings.grid(row=4, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(ratio_settings, text="Minigame Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
@@ -1327,10 +1358,10 @@ class App(CTk):
         self.vars["minigame_scan_delay"] = minigame_scan_delay_var
         CTkEntry(ratio_settings, width=120, textvariable=minigame_scan_delay_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Animation Delay (seconds):").grid(row=2, column=2, padx=12, pady=10, sticky="w" )
-        bait_delay_var = StringVar(value="0.0")
-        self.vars["bait_delay"] = bait_delay_var
-        CTkEntry(ratio_settings, width=120, textvariable=bait_delay_var).grid(row=2, column=3, padx=12, pady=10, sticky="w")
+        CTkLabel(ratio_settings, text="Restart Delay:").grid(row=2, column=2, padx=12, pady=10, sticky="w" )
+        restart_delay_var = StringVar(value="1")
+        self.vars["restart_delay"] = restart_delay_var
+        CTkEntry(ratio_settings, width=120, textvariable=restart_delay_var ).grid(row=2, column=3, padx=12, pady=10, sticky="w")
 
         CTkLabel(ratio_settings, text="Note Tracking Ratio:").grid(row=3, column=0, padx=12, pady=10, sticky="w")
         note_track_ratio_var = StringVar(value="0.05")
@@ -1342,18 +1373,23 @@ class App(CTk):
         self.vars["charge_track_ratio"] = charge_track_ratio_var
         CTkEntry(ratio_settings, width=120, textvariable=charge_track_ratio_var).grid(row=3, column=3, padx=12, pady=10, sticky="w")
 
-        CTkLabel(ratio_settings, text="Restart Delay:").grid(row=4, column=0, padx=12, pady=10, sticky="w" )
-        restart_delay_var = StringVar(value="1")
-        self.vars["restart_delay"] = restart_delay_var
-        CTkEntry(ratio_settings, width=120, textvariable=restart_delay_var ).grid(row=4, column=1, padx=12, pady=10, sticky="w")
+        # Detection
+        detection_settings = CTkFrame(scroll, border_width=2)
+        detection_settings.grid(row=5, column=0, padx=20, pady=20, sticky="nw")
+        CTkLabel(detection_settings, text="Detection Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
-        CTkLabel(ratio_settings, text="Stabilize Threshold:").grid(row=4, column=2, padx=12, pady=10, sticky="w")
+        CTkLabel(detection_settings, text="Stabilize Threshold:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
         stabilize_threshold_var = StringVar(value="6")
         self.vars["stabilize_threshold"] = stabilize_threshold_var
-        CTkEntry(ratio_settings, width=120, textvariable=stabilize_threshold_var).grid(row=4, column=3, padx=12, pady=10, sticky="w")
+        CTkEntry(detection_settings, width=120, textvariable=stabilize_threshold_var).grid(row=1, column=1, padx=12, pady=10, sticky="w")
+
+        CTkLabel(detection_settings, text="Required Fish Pixels:").grid(row=2, column=0, padx=12, pady=10, sticky="w")
+        required_fish_pixels = StringVar(value="8")
+        self.vars["required_fish_pixels"] = required_fish_pixels
+        CTkEntry(detection_settings, width=120, textvariable=required_fish_pixels).grid(row=2, column=1, padx=12, pady=10, sticky="w")
 
         pid_settings = CTkFrame(scroll, border_width=2 )
-        pid_settings.grid(row=5, column=0, padx=20, pady=20, sticky="nw")
+        pid_settings.grid(row=6, column=0, padx=20, pady=20, sticky="nw")
         CTkLabel(pid_settings, text="PD Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
 
         CTkLabel(pid_settings, text="KP:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
@@ -1475,23 +1511,6 @@ class App(CTk):
         reconnect_link_var = StringVar(value="https://www.roblox.com/games/16732694052/Fisch?privateServerLinkCode=18045795843383847993884150042526")
         self.vars["reconnect_link"] = reconnect_link_var
         CTkEntry(auto_reconnect, width=220, textvariable=reconnect_link_var).grid(row=2, column=1, padx=12, pady=10, sticky="w")
-    # Advanced tab
-    def build_advanced_tab(self, parent):
-        scroll = CTkScrollableFrame(parent)
-        scroll.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
-        # VERY important
-        parent.grid_rowconfigure(0, weight=1)
-        parent.grid_columnconfigure(0, weight=1)
-
-        # Detection
-        detection_settings = CTkFrame(scroll, border_width=2)
-        detection_settings.grid(row=0, column=0, padx=20, pady=20, sticky="nw")
-        CTkLabel(detection_settings, text="Detection Settings", font=CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=12, pady=8, sticky="w")
-
-        CTkLabel(detection_settings, text="Required Fish Pixels:").grid(row=1, column=0, padx=12, pady=10, sticky="w")
-        required_fish_pixels = StringVar(value="8")
-        self.vars["required_fish_pixels"] = required_fish_pixels
-        CTkEntry(detection_settings, width=120, textvariable=required_fish_pixels).grid(row=1, column=1, padx=12, pady=10, sticky="w")
     # Show and hide parts of the GUI
     def update_casting_visibility(self, mode):
         if mode == "Perfect":
@@ -1918,19 +1937,15 @@ class App(CTk):
                 if i < click_count - 1:
                     time.sleep(0.03)
         elif click_mode == 1:
-            x = int(x)
-            y = int(y)
-
+            x, y = float(x), float(y)
             # Move cursor
             _move_mouse(x, y)
-
             # Tiny movement (Roblox trick)
             _move_mouse(x, y + 1)
 
             for i in range(click_count):
-                _mouse_event(Quartz.kCGEventLeftMouseDown, x, y)
-                _mouse_event(Quartz.kCGEventLeftMouseUp, x, y)
-
+                _mouse_event(K_CG_EVENT_LEFT_MOUSE_DOWN, x, y)
+                _mouse_event(K_CG_EVENT_LEFT_MOUSE_UP, x, y)
                 if i < click_count - 1:
                     time.sleep(0.03)
         elif click_mode == 2:
@@ -2093,19 +2108,29 @@ class App(CTk):
         """
         if self._scale_cache is not None:
             return self._scale_cache
+            
         if sys.platform == "darwin":
             try:
-                tk_dpi = self.winfo_fpixels('1i')   # e.g. 144.0 on Retina
-                scale  = tk_dpi / 72.0              # 144/72 = 2.0 on Retina
-                scale  = max(1.0, min(4.0, scale))
-                self._scale_cache = scale
+                tk_dpi = self.winfo_fpixels('1i')
+                scale = tk_dpi / 72.0
+                self._scale_cache = max(1.0, min(4.0, scale))
             except Exception:
                 try:
-                    main_display  = Quartz.CGMainDisplayID()
-                    pixel_width   = Quartz.CGDisplayPixelsWide(main_display)
-                    bounds        = Quartz.CGDisplayBounds(main_display)
+                    # Setup
+                    CGRect = 0
+
+                    # Ctypes-only fallback for Scale Factor
+                    main_display = core_graphics.CGMainDisplayID()
+                    pixel_width = core_graphics.CGDisplayPixelsWide(main_display)
+                    
+                    # Get logical bounds using CGDisplayBounds
+                    # CGDisplayBounds returns a CGRect structure
+                    core_graphics.CGDisplayBounds.restype = CGRect
+                    bounds = core_graphics.CGDisplayBounds(main_display)
                     logical_width = bounds.size.width
+                    
                     self._scale_cache = pixel_width / logical_width if logical_width else 1.0
+                    print(self._scale_cache) # Temporary
                 except Exception:
                     self._scale_cache = 1.0
         else:
@@ -2534,7 +2559,7 @@ class App(CTk):
         elif right_bar_center is None:
             left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, left_bar_hex, left_tol, left_tol)
         return fish_center, left_bar_center, right_bar_center
-    # PID-related
+    # Controllers (PID and Maelstrom)
     def _get_pid_gains(self, inside_bar=False):
         """Get PID gains from config, with sensible defaults."""
         try:
@@ -2679,6 +2704,175 @@ class App(CTk):
         self.last_left_x = None
         self.last_right_x = None
         self.last_known_box_center_x = None
+    def _detect_charge_region(
+        self,
+        frame,
+        bar_center,
+        bar_size,
+        fish_top,
+        fish_height,
+        charge_track_ratio,
+        scale
+    ):
+        """
+        Detect charge bar edges inside a dynamically computed region.
+        Returns: (charge_left2, charge_right2, charge_size2)
+        """
+
+        # --- Compute region (screen space) ---
+        charge_half_size = bar_size * 0.4
+
+        charge_left = bar_center - charge_half_size
+        charge_right = bar_center + charge_half_size
+
+        charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
+        charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
+
+        # --- Scale to capture space ---
+        h, w = frame.shape[:2]
+
+        charge_left_s   = int(max(0, charge_left * scale))
+        charge_right_s  = int(min(w, charge_right * scale))
+        charge_top_s    = int(max(0, charge_top * scale))
+        charge_bottom_s = int(min(h, charge_bottom * scale))
+
+        # --- Validate region ---
+        if charge_right_s <= charge_left_s or charge_bottom_s <= charge_top_s:
+            return None, None, None
+
+        # --- Crop ---
+        charge_img = frame[
+            charge_top_s:charge_bottom_s,
+            charge_left_s:charge_right_s
+        ]
+
+        # --- Detect edges ---
+        charge_left2, charge_right2 = self._find_bar_edges(
+            charge_img,
+            "#F1F1F1",
+            "#FFFFFF",
+            8, 8, 0.6
+        )
+
+        # --- Compute size ---
+        if charge_left2 is not None and charge_right2 is not None:
+            charge_size2 = charge_right2 - charge_left2
+        else:
+            charge_size2 = None
+
+        return charge_left2, charge_right2, charge_size2
+    def _compute_charge_state(
+        self,
+        charge_size2,
+        last_charge_size,
+        charge_lost_frames,
+        bar_size
+    ):
+        """
+        Stabilizes charge detection and returns usable charge state.
+        """
+
+        # Update tracking
+        if charge_size2 is not None and charge_size2 > 0:
+            last_charge_size = charge_size2
+            charge_lost_frames = 0
+        else:
+            charge_lost_frames += 1
+
+        # Stabilize (anti-flicker)
+        if charge_lost_frames < 3:
+            effective_charge = last_charge_size
+        else:
+            effective_charge = 0
+
+        # Derived values
+        colors_detected = effective_charge > 0
+        effective_charge_ratio = (effective_charge / bar_size) if bar_size else 0
+
+        return {
+            "effective_charge": effective_charge,
+            "effective_charge_ratio": effective_charge_ratio,
+            "colors_detected": colors_detected,
+            "last_charge_size": last_charge_size,
+            "charge_lost_frames": charge_lost_frames,
+        }
+    def _charge_control(
+        self,
+        fish_x,
+        fish_left,
+        fish_right,
+        bar_left_screen,
+        bar_right_screen,
+        bar_size,
+        charge_state,
+        maelstrom_state,
+        colors_were_missing,
+        left_ratio,
+        right_ratio,
+        now,
+        charge_cooldown_until
+    ):
+        """
+        Maelstrom-style charge controller.
+        Returns: (should_hold, new_state, new_colors_missing, new_cooldown)
+        """
+
+        effective_charge = charge_state["effective_charge"]
+        colors_detected = charge_state["colors_detected"]
+        effective_charge_ratio = charge_state["effective_charge_ratio"]
+
+        # Cooldown
+        if now < charge_cooldown_until:
+            return False, maelstrom_state, colors_were_missing, charge_cooldown_until
+
+        # Sections
+        charge_size = bar_right_screen - bar_left_screen
+        left_threshold = bar_left_screen + (charge_size * left_ratio)
+        right_threshold = bar_left_screen + (charge_size * right_ratio)
+
+        in_left = fish_x < left_threshold
+        in_right = fish_x > right_threshold
+
+        # Edge detection
+        edge_threshold = charge_size * left_ratio
+        at_left_edge = fish_x < (fish_left + edge_threshold)
+        at_right_edge = fish_x > (fish_right - edge_threshold)
+
+        should_hold = False
+
+        if colors_detected:
+            colors_were_missing = False
+
+            if at_right_edge:
+                maelstrom_state = "minigame"
+                should_hold = True
+            else:
+                if in_left:
+                    maelstrom_state = "moving_to_right"
+                    should_hold = False
+                elif in_right:
+                    maelstrom_state = "minigame"
+                    should_hold = True
+                else:
+                    if maelstrom_state == "moving_to_right":
+                        should_hold = False
+                    else:
+                        maelstrom_state = "minigame"
+                        should_hold = True
+        else:
+            colors_were_missing = True
+            should_hold = False
+
+            if in_left:
+                maelstrom_state = "moving_to_right"
+
+        # HARD STOP
+        if effective_charge_ratio >= 0.6:
+            should_hold = False
+            maelstrom_state = "cooldown"
+            charge_cooldown_until = now + 0.2
+
+        return should_hold, maelstrom_state, colors_were_missing, charge_cooldown_until
     # Main macro loop
     def start_macro(self):
         self.macro_running = True # flag to control macro loop and allow safe stopping
@@ -3116,6 +3310,8 @@ class App(CTk):
         bar_hex = self.vars["left_color"].get()
         bar_tolerance = int(self.vars["left_tolerance"].get())
         shake_clicks = int(self.vars["shake_clicks"].get())
+
+        required_fish_pixels = int(self.vars["required_fish_pixels"].get() or 10)
         # Initialize attempts and stop event
         attempts = 0
         stop_event = self._start_capture(scan_delay)
@@ -3151,7 +3347,7 @@ class App(CTk):
                     break
                 if detection_method == "Friend Area":
                     friend_x = self._find_color_center( detection_area, "#9bff9b", tolerance )
-                fish_x = self._find_color_center( detection_area, fish_hex, tolerance )
+                fish_x = self._find_color_cluster(detection_area, fish_hex, tolerance, required_fish_pixels)
                 bar_x = self._find_color_center( detection_area, bar_hex, bar_tolerance )
                 if detection_method == "Friend Area":
                     if not friend_x:
@@ -3228,6 +3424,7 @@ class App(CTk):
         detection_method = (self.vars["detection_method"].get())
         bar_hex = self.vars["left_color"].get() # Left bar color replaced by left color
         bar_tolerance = int(self.vars["left_tolerance"].get())
+        required_fish_pixels = int(self.vars["required_fish_pixels"].get() or 10)
         attempts = 0
         stop_event = self._start_capture(scan_delay)
         while self.macro_running and attempts < failsafe:
@@ -3256,7 +3453,7 @@ class App(CTk):
                     break
                 if detection_method == "Friend Area":
                     friend_x = self._find_color_center( detection_area, "#9bff9b", tolerance )
-                fish_x = self._find_color_center( detection_area, fish_hex, tolerance )
+                fish_x = self._find_color_cluster(detection_area, fish_hex, tolerance, required_fish_pixels)
                 bar_x = self._find_color_center( detection_area, bar_hex, bar_tolerance )
                 if detection_method == "Friend Area":
                     if not friend_x:
@@ -3444,7 +3641,8 @@ class App(CTk):
                     fish_x, left_x, right_x = self._do_image_search(img, img_h)
                 else:
                     fish_x, left_x, right_x = self._do_pixel_search(img)
-                arrow_center = self._find_color_center(img, arrow_hex, arrow_tol)
+                # Find arrow indicator
+                arrow_indicator_x = self._find_arrow_indicator_x(img, arrow_hex, arrow_tol, mouse_down)
                 if track_notes == "on":
                     note_box_pos = self._find_color_center(note_img, note_box_hex, note_box_tol)
                 else:
@@ -3508,31 +3706,15 @@ class App(CTk):
                     max_right = fish_right - right_deadzone
                     # Compute charge values (only if charge is on to prevent CPU spikes)
                     if track_charges == "on" and bars_found:
-                        charge_half_size = bar_size * 0.4
-                        charge_left = bar_center - charge_half_size
-                        charge_right = bar_center + charge_half_size
-                        charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
-                        charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                        charge_left_s   = int(max(0, charge_left * scale))
-                        charge_right_s  = int(min(frame.shape[1], charge_right * scale))
-                        charge_top_s    = int(max(0, charge_top * scale))
-                        charge_bottom_s = int(min(frame.shape[0], charge_bottom * scale))
-
-                        if charge_right_s <= charge_left_s or charge_bottom_s <= charge_top_s:
-                            charge_left2, charge_right2 = None, None
-                            charge_size2 = None
-                        else:
-                            charge_img = frame[
-                                charge_top_s:charge_bottom_s,
-                                charge_left_s:charge_right_s
-                            ]
-                            charge_half_size = bar_size * 0.4
-                            charge_left = bar_center - charge_half_size
-                            charge_right = bar_center + charge_half_size
-                            charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
-                            charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                            charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
-                            charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
+                        charge_left2, charge_right2, charge_size2 = self._detect_charge_region(
+                            frame,
+                            bar_center,
+                            bar_size,
+                            fish_top,
+                            fish_height,
+                            charge_track_ratio,
+                            scale
+                        )
                 else:
                     bar_size = None
                     bar_center = None
@@ -3570,9 +3752,7 @@ class App(CTk):
                                 controller_mode = 0
                         else:
                             controller_mode = 1
-                elif arrow_center:
-                    # Find arrow indicator
-                    arrow_indicator_x = self._find_arrow_indicator_x(img, arrow_hex, arrow_tol, mouse_down)
+                elif arrow_indicator_x:
                     # Indicator failsafe
                     if arrow_indicator_x is None:
                         controller_mode = 3
@@ -3650,98 +3830,39 @@ class App(CTk):
                 elif controller_mode == 4:
                     now = time.time()
 
-                    # Cooldown
-                    if now < charge_cooldown_until:
-                        release_mouse()
-                        should_hold = False
-                        continue
+                    # --- TRACKING ---
+                    charge_state = self._compute_charge_state(
+                        charge_size2,
+                        last_charge_size,
+                        charge_lost_frames,
+                        bar_size
+                    )
 
-                    # Stabilize charge detection (keep existing detection logic)
-                    if charge_size2 is not None and charge_size2 > 0:
-                        last_charge_size = charge_size2
-                        charge_lost_frames = 0
-                    else:
-                        charge_lost_frames += 1
+                    last_charge_size = charge_state["last_charge_size"]
+                    charge_lost_frames = charge_state["charge_lost_frames"]
 
-                    if charge_lost_frames < 3:
-                        effective_charge = last_charge_size
-                    else:
-                        effective_charge = 0
+                    # --- CONTROL ---
+                    should_hold, maelstrom_state, colors_were_missing, charge_cooldown_until = self._charge_control(
+                        fish_x,
+                        fish_left,
+                        fish_right,
+                        bar_left_screen,
+                        bar_right_screen,
+                        bar_size,
+                        charge_state,
+                        maelstrom_state,
+                        colors_were_missing,
+                        left_ratio,
+                        right_ratio,
+                        now,
+                        charge_cooldown_until
+                    )
 
-                    # Maelstrom-style logic: colors detected if effective_charge > 0
-                    colors_detected = effective_charge > 0
-
-                    # Calculate bar sections
-                    charge_size = bar_right_screen - bar_left_screen
-                    left_threshold = bar_left_screen + (charge_size * maelstrom_left_section)
-                    right_threshold = bar_left_screen + (charge_size * maelstrom_right_section)
-
-                    # Determine icon position sections
-                    in_left_section = fish_x < left_threshold
-                    in_middle_section = left_threshold <= fish_x <= right_threshold
-                    in_right_section = fish_x > right_threshold
-
-                    # Edge detection (similar to IRUS)
-                    edge_threshold = charge_size * left_ratio
-                    target_at_left_edge = fish_x < (fish_left + edge_threshold)
-                    target_at_right_edge = fish_x > (fish_right - edge_threshold)
-
-                    should_hold = False
-
-                    if colors_detected:
-                        # Colors detected - clear the missing flag
-                        colors_were_missing = False
-
-                        # State machine logic similar to IRUS Neural
-                        if target_at_right_edge:
-                            # Icon at right edge of screen - spam minigame
-                            maelstrom_state = "minigame"
-                            should_hold = not colors_were_missing
-                        else:
-                            # Middle zone - state machine based on bar sections
-                            if in_left_section:
-                                # Left section: Enter "moving_to_right" state - release until we reach right section
-                                maelstrom_state = "moving_to_right"
-                                should_hold = False
-                            elif in_right_section:
-                                # Right section: Always play minigame
-                                maelstrom_state = "minigame"
-                                should_hold = not colors_were_missing
-                            else:  # in_middle_section
-                                # Middle section: Depends on state
-                                if maelstrom_state == "moving_to_right":
-                                    # Coming from left - keep releasing until we reach right section
-                                    should_hold = False
-                                else:
-                                    # Already in minigame state - play the minigame
-                                    maelstrom_state = "minigame"
-                                    should_hold = not colors_were_missing
-                    else:
-                        # Colors not detected - release and set flag
-                        colors_were_missing = True
-                        should_hold = False
-
-                        # Override: force release if in left section
-                        if in_left_section:
-                            maelstrom_state = "moving_to_right"
-
-                    # HARD STOP: release when fully charged
-                    effective_charge_ratio = effective_charge / bar_size if bar_size else 0
-                    if effective_charge_ratio >= 0.6:
-                        should_hold = False
-                        maelstrom_state = "cooldown"
-                        charge_cooldown_until = now + 0.2
-
-                    # Execute mouse control
+                    # --- EXECUTION ---
                     if should_hold:
                         hold_mouse()
                     else:
                         release_mouse()
-
-                    # Overlay
-                    if charge_left2 is not None and charge_right2 is not None:
-                        charge_center = ((charge_left2 + charge_right2) // 2) + charge_left
-                        # print(f"Charge detected: {colors_detected}, State: {maelstrom_state}, Hold: {should_hold}")
                 previous_controller_mode = controller_mode
                 time.sleep(0.01)
             except Exception as e:
