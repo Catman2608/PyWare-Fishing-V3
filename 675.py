@@ -1141,7 +1141,7 @@ class FloatingArea(tk.Toplevel):
 
 
 class TermsOfServiceDialog(tk.Toplevel):
-    # Ensures the TOS dialog always closes even if background processing stalls
+    "Ensures the TOS dialog always closes even if background processing stalls"
     def auto_subscribe(self):
         try:
             import time

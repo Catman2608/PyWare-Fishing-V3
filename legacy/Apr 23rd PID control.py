@@ -33,12 +33,13 @@ import io
 # Ctypes/Quartz for special click types
 if sys.platform == "win32":
     import ctypes # Windows
+    import ctypes as Quartz # Used to disable quartz on Windows
     windll = ctypes.windll.user32
     MOUSEEVENTF_MOVE = 0x0001
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 elif sys.platform == "darwin":
-    import Quartz # If you're on macOS remove the first hashtag
+    # import Quartz # If you're on macOS remove the first hashtag
     def _move_mouse(x, y):
         point = Quartz.CGPointMake(float(x), float(y))
         Quartz.CGWarpMouseCursorPosition(point)
@@ -62,16 +63,16 @@ def get_base_path():
             return os.path.join(
                 os.path.expanduser("~"),
                 "Library", "Application Support",
-                "PyWareFishingV3"
+                "PyWareAutomateV1"
             )
         elif sys.platform == "win32":
             return os.path.join(
                 os.path.expanduser("~"),
                 "AppData", "Roaming",
-                "PyWareFishingV3"
+                "PyWareAutomateV1"
             )
         else:
-            return os.path.join(os.path.expanduser("~"), "PyWareFishingV3")
+            return os.path.join(os.path.expanduser("~"), "PyWareAutomateV1")
 
     # Dev mode → project directory
     return os.path.dirname(os.path.abspath(__file__))
@@ -106,9 +107,6 @@ BASE_PATH = get_base_path()
 CONFIG_DIR = os.path.join(BASE_PATH, "configs")
 IMAGES_PATH = os.path.join(BASE_PATH, "images")
 DEBUG_DIR = BASE_PATH
-
-CONFIG_PATH = os.path.join(BASE_PATH, "last_config.json")
-APP_VERSION = "3.0"
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(IMAGES_PATH, exist_ok=True)
@@ -514,271 +512,6 @@ class FishOverlay:
                                        fill="gray", width=2)
 
         self.canvas.after(0, _draw)
-# Terms Of Service Dialogue
-class TermsOfServiceDialog(CTkToplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self.parent = parent
-        self.accepted = False
-        self.processing = False
-
-        self.title("PyWare Fishing V3 - Terms of Use")
-        self.geometry("750x600")
-        self.minsize(650, 500)
-
-        self.grab_set()
-        self.transient(parent)
-
-        # Center window
-        self.update_idletasks()
-        x = (self.winfo_screenwidth() // 2) - (750 // 2)
-        y = (self.winfo_screenheight() // 2) - (600 // 2)
-        self.geometry(f"+{x}+{y}")
-
-        # Container
-        self.container = CTkFrame(self)
-        self.container.pack(fill="both", expand=True, padx=20, pady=20)
-
-        self.pages = {}
-
-        self._build_tos_page()
-        self._build_setup_page()
-
-        self.show_page("tos")
-
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-    # ------------------------
-    # PAGE SYSTEM
-    # ------------------------
-    def show_page(self, name):
-        for page in self.pages.values():
-            page.pack_forget()
-        self.pages[name].pack(fill="both", expand=True)
-
-    # ------------------------
-    # PAGE 1: TOS
-    # ------------------------
-    def _build_tos_page(self):
-        page = CTkFrame(self.container)
-        self.pages["tos"] = page
-
-        CTkLabel(page, text="Terms of Use", font=CTkFont(size=20, weight="bold")).pack(pady=10)
-
-        # Scrollable text
-        self.textbox = CTkTextbox(page, wrap="word")
-        self.textbox.pack(fill="both", expand=True, pady=10)
-
-        self.textbox.insert("1.0", """
-PyWare Fishing V3.0 - Terms of Use
-
-By using this software, you agree to the following:
-
-
-⚡ 1. USAGE & MODIFICATION
-
-✅ YOU ARE ALLOWED TO:
-Use these macros for personal purposes.
-Study and reverse engineer the code for educational purposes.
-Modify the code for your own personal use.
-Share your modifications with proper attribution.
-                            
-❌ YOU ARE NOT ALLOWED TO:
-Repackage or redistribute this software as your own.
-Remove or modify credits to the author (Catman2608).
-Sell or monetize this software or its derivatives.
-Claim ownership of the original codebase.
-                            
-⚡ IF YOU SHARE MODIFICATIONS:
-⚠️ You MUST credit Catman2608 as the original author.
-⚠️ You MUST link to the original source (YouTube/Website).
-⚠️ You MUST clearly indicate what changes you made.
-                            
-⚡ 2. INTENDED USE & GAME COMPLIANCE
-
-This software suite is designed for use on multiple platforms.
-You are responsible for ensuring your use complies with the platform's Terms of Service and specific game rules.
-The developers and the website owner (Catman2608) are NOT responsible for any account actions (bans, suspensions) resulting from your use of this software.
-Use at your own risk. (usage in Roblox games are allowed)
-
-⚡ 3. LIABILITY DISCLAIMER
-
-The owner and authors are NOT liable for any damages, data loss, or account issues.
-There is no guarantee of functionality, compatibility, or performance.
-Software is provided "as-is." Use is entirely at your own risk.
-                            
-⚡ 4. PRIVACY & DATA
-
-Macros store configuration data (settings) locally on your device.
-No personal data is collected or transmitted to external servers.
-Your preferences are stored in a local .json file only.
-                            
-⚡ 5. CREDITS & ATTRIBUTION
-                            
-Original Author: Catman2608
-YouTube: https://www.youtube.com/@HexaTitanGaming
-Discord: https://discord.gg/aMZY8yrF8r
-If you share, modify, or redistribute this software:
-                            
-📋 REQUIRED: Credit "Catman2608" as the original creator
-📋 REQUIRED: Link to the original source
-📋 REQUIRED: Indicate any changes you made
-🚫 FORBIDDEN: Claim the entire work as your own
-                            
-⚡ 6. TERMS UPDATES
-
-These terms may be updated at any time.
-Continued use of the software from the PyWare Automate website constitutes acceptance of the updated terms.
-                            
-✅ 7. ACCEPTANCE
-
-By accepting the terms, you acknowledge that you have read, understood, and agree to these Terms of Use.
-If you do not agree, please remove the software from your device.
-
-🚀 Thank you for using PyWare Fishing! 🚀
-        """)
-        self.textbox.configure(state="disabled")
-
-        # Checkbox
-        self.agree_var = tk.BooleanVar()
-        self.checkbox = CTkCheckBox(
-            page,
-            text="I agree to the Terms",
-            variable=self.agree_var,
-            command=self._update_accept_state
-        )
-        self.checkbox.pack(anchor="w", pady=10)
-
-        # Buttons
-        btn_frame = CTkFrame(page, fg_color="transparent")
-        btn_frame.pack(fill="x")
-
-        self.decline_btn = CTkButton(btn_frame, text="Decline", command=self.on_decline)
-        self.decline_btn.pack(side="left")
-
-        self.accept_btn = CTkButton(
-            btn_frame,
-            text="Accept",
-            state="disabled",
-            command=self.on_accept
-        )
-        self.accept_btn.pack(side="right")
-
-    # ------------------------
-    # PAGE 2: SETUP GUIDE
-    # ------------------------
-    def _build_setup_page(self):
-        page = CTkFrame(self.container)
-        self.pages["setup"] = page
-
-        CTkLabel(page, text="Setup Guide", font=CTkFont(size=20, weight="bold")).pack(pady=10)
-
-        guide_text = CTkTextbox(page)
-        guide_text.pack(fill="both", expand=True, pady=10)
-
-        guide_text.insert("1.0", """
-Step 1: Download and extract the config pack and images pack from https://drive.google.com/drive/folders/1e9tZwDtAaiYKTVFeArjWTIuztLgLg88a?usp=drive_link
-Step 2: Click Open Base Folder to open the base folder
-Step 3: Paste the configs pack in the configs folder
-Step 4: Paste the images pack in the images folder
-Step 5: Change Bar Areas
-        """)
-        guide_text.configure(state="disabled")
-
-        btn_frame = CTkFrame(page, fg_color="transparent")
-        btn_frame.pack(fill="x")
-
-        CTkButton(
-            btn_frame,
-            text="⬅ Back",
-            command=lambda: self.show_page("tos")
-        ).pack(side="left")
-
-        CTkButton(
-            btn_frame,
-            text="📂 Open Base Folder",
-            command=self.open_base_folder
-        ).pack(side="left", padx=10)
-
-        CTkButton(
-            btn_frame,
-            text="Finish",
-            command=self._on_finish
-        ).pack(side="right")
-
-    # ------------------------
-    # LOGIC
-    # ------------------------
-    def _close_and_return_to_app(self):
-        try:
-            self.grab_release()
-        except tk.TclError:
-            pass
-
-        self.destroy()
-
-        if self.parent and self.parent.winfo_exists():
-            self.parent.after(0, self.parent.deiconify)
-            self.parent.after(0, self.parent.lift)
-            self.parent.after(0, self.parent.focus_force)
-
-    def _on_finish(self):
-        self.accepted = True
-        # Release the modal dialog cleanly before returning focus to the app.
-        self._close_and_return_to_app()
-        webbrowser.open("https://www.youtube.com/@HexaTitanGaming")
-        messagebox.showwarning(
-            "Note",
-            "Please subscribe to support development.",
-            parent=self.parent
-        )
-
-    def _update_accept_state(self):
-        if self.agree_var.get():
-            self.accept_btn.configure(state="normal")
-        else:
-            self.accept_btn.configure(state="disabled")
-
-    def on_accept(self):
-        if not self.agree_var.get():
-            return
-
-        self.accepted = True
-
-        # 🔥 Instead of closing → go to setup page
-        self.show_page("setup")
-
-    def on_decline(self):
-        self.accepted = False
-        self._close_and_return_to_app()
-
-    def on_close(self):
-        if not self.processing:
-            self.accepted = False
-            self._close_and_return_to_app()
-
-    # Misc
-    def auto_subscribe(self):
-        try:
-            webbrowser.open("https://www.youtube.com/@HexaTitanGaming")
-            messagebox.showwarning(
-                "Note",
-                "Please subscribe to support development.",
-                parent=self.parent
-            )
-        finally:
-            self.processing = False
-            self.accepted = True
-            self._close_and_return_to_app()
-    def open_base_folder(self):
-        folder = BASE_PATH
-        if sys.platform == "win32":
-            os.startfile(folder)
-        elif sys.platform == "darwin":  # macOS
-            subprocess.run(["open", folder])
-        else:  # Linux
-            subprocess.run(["xdg-open", folder])
 # Main app
 class App(CTk):
     def __init__(self):
@@ -799,9 +532,6 @@ class App(CTk):
 
         # Detection variables
         self.last_fish_x = None
-        self.last_bar_left = None
-        self.last_bar_right = None
-        self.last_cached_box_length = None  # Cached bar size from minigame for arrow estimation
 
         # P/D state variables
         self.prev_error = 0.0      # previous error term
@@ -857,26 +587,7 @@ class App(CTk):
         # Invalidate scale cache if the window moves to a different monitor
         if sys.platform == "darwin":
             self.bind("<Configure>", lambda e: self._invalidate_scale_cache())
-        
-        # Show TOS dialogue
-        state, first_launch, new_version = self.load_app_state()
-
-        # 🔥 Show TOS if needed
-        if first_launch or not state.get("tos_accepted", False):
-            dialog = TermsOfServiceDialog(self)
-            self.wait_window(dialog)
-
-            if not dialog.accepted:
-                self.destroy()
-                return
-
-            # Mark accepted
-            state["tos_accepted"] = True
-
-        # Update version AFTER TOS
-        state["version"] = APP_VERSION
-
-        self.save_app_state(state)
+            
         # Setup overlay and eyedropper
         self.fish_overlay = FishOverlay(self)
         self.eyedropper = Eyedropper(self)
@@ -1528,35 +1239,11 @@ class App(CTk):
         self.save_settings(name)
         self.refresh_config_dropdown()
         self.config_dropdown.set(name)
-    # Get items to load TOS
-    def load_app_state(self):
-        # Default state
-        state = {
-            "version": None,
-            "tos_accepted": False
-        }
-
-        # Load file if exists
-        if os.path.exists(CONFIG_PATH): # CONFIG_DIR
-            try:
-                with open(CONFIG_PATH, "r") as f:
-                    state.update(json.load(f))
-            except Exception:
-                pass  # corrupted file = treat as first launch
-
-        # 🔥 Detection logic
-        is_first_launch = state["version"] is None
-        is_new_version = state["version"] != APP_VERSION
-
-        return state, is_first_launch, is_new_version
-    def save_app_state(self, state):
-        with open(CONFIG_PATH, "w") as f:
-            json.dump(state, f, indent=4)
     # Save and load settings
     def save_settings(self, name="default"):
         """Save all settings to a JSON config file."""
-        if not os.path.exists(CONFIG_PATH):
-            os.makedirs(CONFIG_PATH)
+        if not os.path.exists(CONFIG_DIR):
+            os.makedirs(CONFIG_DIR)
         data = {}
         # Save all StringVar and related variables
         try:
@@ -1667,7 +1354,7 @@ class App(CTk):
     
     def load_last_config(self):
         """Load the last used config."""
-        last_config_path = os.path.join(BASE_PATH, "last_config.json")
+        last_config_path = os.path.join(CONFIG_DIR, "last_config.json")
         last_config = "default"
         if os.path.exists(last_config_path):
             try:
@@ -1684,7 +1371,7 @@ class App(CTk):
     
     def save_last_config(self, name):
         """Save the last used config name (merge into last_config.json)."""
-        last_config_path = os.path.join(BASE_PATH, "last_config.json")
+        last_config_path = os.path.join(CONFIG_DIR, "last_config.json")
         data = {}
         if os.path.exists(last_config_path):
             try:
@@ -1706,7 +1393,7 @@ class App(CTk):
     def load_misc_settings(self):
         """Load miscellaneous settings from last_config.json."""
         try:
-            path = os.path.join(BASE_PATH, "last_config.json")
+            path = os.path.join(CONFIG_DIR, "last_config.json")
             if os.path.exists(path):
                 with open(path, "r") as f:
                     data = json.load(f)
@@ -1736,7 +1423,7 @@ class App(CTk):
             self.bar_areas = {"fish": None, "shake": None, "friend": None, "totem": None}
     def save_misc_settings(self):
         """Save misc settings without overwriting last_config."""
-        path = os.path.join(BASE_PATH, "last_config.json")
+        path = os.path.join(CONFIG_DIR, "last_config.json")
         # Load existing content
         data = {}
         if os.path.exists(path):
@@ -2385,13 +2072,7 @@ class App(CTk):
         if frame is None:
             return None, None
 
-        if frame.size == 0 or frame.ndim < 2:
-            return None, None
-
-        h, w = frame.shape[:2]
-        if h == 0 or w == 0:
-            return None, None
-
+        h, w, _ = frame.shape
         y = int(h * scan_height_ratio)
 
         # Convert to BGR
@@ -2446,71 +2127,56 @@ class App(CTk):
 
     def _update_arrow_box_estimation(self, arrow_centroid_x, is_holding, capture_width):
         """
-        Estimate box position based on arrow indicator using IRUS-style logic.
-        
-        If holding: arrow is on RIGHT edge, extend LEFT
-        If not holding: arrow is on LEFT edge, extend RIGHT
-        When state swaps: measure distance between arrows to get box size
-        
-        Args:
-            arrow_centroid_x: X coordinate of arrow center
-            is_holding: Whether mouse button is currently held
-            capture_width: Width of capture region
-        
-        Returns:
-            Estimated bar center X coordinate, or None if can't estimate
+        Estimate box position based on arrow indicator using the last bar positions in __init__.
+        If holding: arrow is on RIGHT edge, reconstruct based on LEFT and last RIGHT
+        If not holding: arrow is on LEFT edge, reconstruct based on RIGHT and last LEFT
         """
-        # Handle missing arrow
         if arrow_centroid_x is None:
-            if self.last_known_box_center_x is not None:
-                return self.last_known_box_center_x
-            return None
-        # Check if state swapped (holding <-> not holding)
-        state_swapped = (self.last_holding_state is not None and 
-                        is_holding != self.last_holding_state)
-        
-        # When swapping: measure new box size from arrow positions
-        if state_swapped and self.last_indicator_x is not None:
-            new_box_size = abs(arrow_centroid_x - self.last_indicator_x)
-            if new_box_size >= 10:  # Reasonable minimum
-                self.estimated_box_length = new_box_size
-        
-        # Set default box size if we don't have one
-        if self.estimated_box_length is None or self.estimated_box_length <= 0:
-            if self.last_cached_box_length is not None and self.last_cached_box_length > 0:
-                self.estimated_box_length = self.last_cached_box_length
+            return self.last_known_box_center_x, self.last_left_x, self.last_right_x
 
-        # Position the box based on current hold state
+        # --- INIT ---
+        if self.estimated_box_length is None:
+            self.estimated_box_length = min(capture_width * 0.3, 200)
+
+        # --- STATE SWAP DETECTION ---
+        if self.last_holding_state is not None and self.last_indicator_x is not None:
+            if is_holding != self.last_holding_state:
+                delta = abs(arrow_centroid_x - self.last_indicator_x)
+
+                if 10 < delta < capture_width * 0.8:
+                    self.estimated_box_length = (
+                        0.7 * self.estimated_box_length + 0.3 * delta
+                    )
+
+        # --- RECONSTRUCT ---
         if is_holding:
-            # Holding: arrow is on RIGHT, extend LEFT
-            self.last_right_x = float(arrow_centroid_x)
-            self.last_left_x = self.last_right_x - self.estimated_box_length
+            right = arrow_centroid_x
+            left = right - self.estimated_box_length
         else:
-            # Not holding: arrow is on LEFT, extend RIGHT
-            self.last_left_x = float(arrow_centroid_x)
-            self.last_right_x = self.last_left_x + self.estimated_box_length
-        
-        # Clamp to capture bounds (keep arrow anchored)
-        if self.last_left_x < 0:
-            self.last_left_x = 0.0
-            self.last_right_x = min(self.estimated_box_length, capture_width)
-        
-        if self.last_right_x > capture_width:
-            self.last_right_x = float(capture_width)
-            self.last_left_x = max(0.0, self.last_right_x - self.estimated_box_length)
-        
-        # Calculate and store center
-        box_center = (self.last_left_x + self.last_right_x) / 2.0
-        self.last_known_box_center_x = box_center
-        
-        # Update tracking variables for next frame
+            left = arrow_centroid_x
+            right = left + self.estimated_box_length
+
+        # --- CLAMP ---
+        if left < 0:
+            left = 0
+            right = self.estimated_box_length
+        elif right > capture_width:
+            right = capture_width
+            left = right - self.estimated_box_length
+
+        # --- CENTER SMOOTHING ---
+        center = (left + right) / 2
+        if self.last_known_box_center_x is not None:
+            center = 0.8 * self.last_known_box_center_x + 0.2 * center
+
+        # --- SAVE ---
+        self.last_left_x = left
+        self.last_right_x = right
+        self.last_known_box_center_x = center
         self.last_indicator_x = arrow_centroid_x
         self.last_holding_state = is_holding
 
-        # Return values
-        left_x = self.last_left_x
-        right_x = self.last_right_x
-        return box_center, left_x, right_x
+        return int(center), left, right
     # Do pixel/image search
     def _do_pixel_search(self, img):
         fish_hex = self.vars["fish_color"].get()
@@ -2544,8 +2210,8 @@ class App(CTk):
             kp = 0.6
             kd = 0.2
         return kp, kd
-
-    def _pid_control(self, error, bar_center_x=None):
+    
+    def _pid_control_strict(self, error, bar_center_x=None):
         """
         Compute PD output using proportional gain system from comet reference.
         Uses velocity-based derivative with asymmetric damping.
@@ -2582,61 +2248,6 @@ class App(CTk):
             # Fallback to standard derivative
             if self.prev_error is not None and dt > 0:
                 d_term = kd * (error - self.prev_error) / dt
-
-        # Combined control signal (PD controller output)
-        control_signal = p_term + d_term
-        control_signal = max(-pd_clamp, min(pd_clamp, control_signal))  # Clamp output
-
-        # update history
-        self.prev_error = error
-        self.last_time = now
-        if bar_center_x is not None:
-            self.last_bar_x = bar_center_x
-
-        return control_signal
-    
-    def _pid_control_stable(self, error, bar_center_x=None):
-        """
-        Compute PD output using proportional gain system from comet reference.
-        Uses velocity-based derivative with asymmetric damping.
-        """
-
-        now = time.perf_counter()
-        pd_clamp = float(self.vars["pid_clamp"].get() or 100)
-        # first sample: initialize state and return zero control
-        if self.last_time is None:
-            self.last_time = now
-            self.prev_error = error
-            if bar_center_x is not None:
-                self.last_bar_x = bar_center_x
-            return 0.0
-
-        dt = now - self.last_time
-        if dt <= 0:
-            return 0.0
-
-        # Cap dt so a stale/slow frame can't cause a massive one-shot kick.
-        # At 20 FPS dt≈0.05s; we allow up to 3× that (0.15s) before clamping.
-        dt_clamped = min(dt, 0.15)
-
-        kp, kd = self._get_pid_gains()
-
-        # P term — scaled by dt so the output represents force-per-second,
-        # keeping behaviour consistent regardless of loop rate.
-        p_term = kp * error * dt_clamped
-
-        # D term - asymmetric damping based on situation
-        d_term = 0.0
-        if bar_center_x is not None and self.last_bar_x is not None and dt_clamped > 0:
-            bar_velocity = (bar_center_x - self.last_bar_x) / dt_clamped
-            error_magnitude_decreasing = abs(error) < abs(self.prev_error) if self.prev_error is not None else False
-            bar_moving_toward_target = (bar_velocity > 0 and error > 0) or (bar_velocity < 0 and error < 0)
-            damping_multiplier = 2.0 if (error_magnitude_decreasing and bar_moving_toward_target) else 0.5
-            d_term = -kd * damping_multiplier * bar_velocity * dt_clamped
-        else:
-            # Fallback to standard derivative
-            if self.prev_error is not None and dt_clamped > 0:
-                d_term = kd * (error - self.prev_error)
 
         # Combined control signal (PD controller output)
         control_signal = p_term + d_term
@@ -3407,16 +3018,16 @@ class App(CTk):
             args=(_minigame_stop, scan_delay),
             daemon=True
         ).start()
-        # Prepare templates for image search (disabled for now)
-        # for key in ["fish", "left_bar", "right_bar"]:
-        #     template = self.templates.get(key)
+        # Prepare templates for image search
+        for key in ["fish", "left_bar", "right_bar"]:
+            template = self.templates.get(key)
 
-        #     if template is None:
-        #         continue
+            if template is None:
+                continue
 
-        #     # Convert to grayscale once
-        #     if len(template.shape) == 3:
-        #         template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            # Convert to grayscale once
+            if len(template.shape) == 3:
+                template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
         while self.macro_running: # Main macro loop
             try:
                 # Grab full screen then crop
@@ -3458,27 +3069,23 @@ class App(CTk):
                     fish_x = fish_x + fish_left
                 # Fish restart and clear overlay logic with multiple restart methods and PID reset when bars are lost
                 self.fish_overlay.clear()
-                if restart_method == "Friend Area":
+                if restart_method == "Friend Area": # Not implemented yet (this is a stub)
                     friend_x = self._find_color_center(friend_img, "#9bff9b", 2)
-                    # Cache fish and bar positions when found
                     if fish_x is not None:
                         self.last_fish_x = fish_x
                     if left_x is not None and right_x is not None:
                         self.last_bar_left = left_x
                         self.last_bar_right = right_x
-                    # If friend pixel is found, restart (cycle ends)
-                    if friend_x is not None:
-                        release_mouse()
-                        time.sleep(restart_delay)
-                        return
-                    # If bars not found, use cached bar positions
-                    if left_x is None or right_x is None:
-                        if self.last_bar_left is not None and self.last_bar_right is not None:
-                            left_x = self.last_bar_left
-                            right_x = self.last_bar_right
-                    # If fish not found, use cached fish position
-                    if fish_x is None and self.last_fish_x is not None:
-                        fish_x = self.last_fish_x
+                    else:
+                        if friend_x is not None:
+                            release_mouse()
+                            time.sleep(restart_delay)
+                            return
+                        else:
+                            fish_x = self.last_fish_x
+                            if left_x is not None and right_x is not None:
+                                left_x = self.last_bar_left
+                                right_x = self.last_bar_right
                 elif restart_method == "Fish + Bar":
                     if fish_x is not None:
                         self.last_fish_x = fish_x
@@ -3500,7 +3107,6 @@ class App(CTk):
                 bars_found = left_x is not None and right_x is not None
                 if bars_found == True:
                     bar_size = right_x - left_x # Don't add fish left here
-                    self.last_cached_box_length = bar_size  # Cache bar size for arrow estimation
                     bar_center = (left_x + bar_size // 2) + fish_left # ADD FISH LEFT HERE
                     left_deadzone = bar_size * left_ratio
                     right_deadzone = bar_size * right_ratio
@@ -3513,26 +3119,22 @@ class App(CTk):
                         charge_right = bar_center + charge_half_size
                         charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
                         charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                        charge_left_s   = int(max(0, charge_left * scale))
-                        charge_right_s  = int(min(frame.shape[1], charge_right * scale))
-                        charge_top_s    = int(max(0, charge_top * scale))
-                        charge_bottom_s = int(min(frame.shape[0], charge_bottom * scale))
+                        charge_left_s   = int(charge_left * scale)
+                        charge_right_s  = int(charge_right * scale)
+                        charge_top_s    = int(charge_top * scale)
+                        charge_bottom_s = int(charge_bottom * scale)
 
-                        if charge_right_s <= charge_left_s or charge_bottom_s <= charge_top_s:
-                            charge_left2, charge_right2 = None, None
-                            charge_size2 = None
-                        else:
-                            charge_img = frame[
-                                charge_top_s:charge_bottom_s,
-                                charge_left_s:charge_right_s
-                            ]
-                            charge_half_size = bar_size * 0.4
-                            charge_left = bar_center - charge_half_size
-                            charge_right = bar_center + charge_half_size
-                            charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
-                            charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
-                            charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
-                            charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
+                        charge_img = frame[
+                            charge_top_s:charge_bottom_s,
+                            charge_left_s:charge_right_s
+                        ]
+                        charge_half_size = bar_size * 0.4
+                        charge_left = bar_center - charge_half_size
+                        charge_right = bar_center + charge_half_size
+                        charge_top = int(fish_height * charge_track_ratio * 0.8) + fish_top
+                        charge_bottom = int(fish_height * charge_track_ratio * 1.2) + fish_top
+                        charge_left2, charge_right2 = self._find_bar_edges(charge_img, "#F1F1F1", "#FFFFFF", 8, 8, 0.6)
+                        charge_size2 = charge_right2 - charge_left2 if charge_left2 is not None and charge_right2 is not None else None
                 else:
                     bar_size = None
                     bar_center = None
@@ -3606,6 +3208,7 @@ class App(CTk):
                     pid_reentry_frames = 2
                 # Draw boxes
                 if self.vars["fish_overlay"].get() == "on":
+                    self.after(0, lambda: self.fish_overlay.draw(bar_center=bar_center,box_size=(bar_right_screen - bar_left_screen),color="pink",canvas_offset=fish_left))
                     self.after(0, lambda _bc=bar_center, _bs=bar_size, _fl=fish_left: self.fish_overlay.draw(bar_center=_bc, box_size=_bs, color="green", canvas_offset=_fl, show_bar_center=True))
                     self.after(0, lambda _ml=max_left, _fl=fish_left: self.fish_overlay.draw(bar_center=_ml, box_size=15, color="lightblue", canvas_offset=_fl))
                     self.after(0, lambda _mr=max_right, _fl=fish_left: self.fish_overlay.draw(bar_center=_mr, box_size=15, color="lightblue", canvas_offset=_fl))
@@ -3614,16 +3217,10 @@ class App(CTk):
                 if controller_mode == 0 and bar_center is not None:
                     error = fish_x - bar_center
                     if pid_reentry_frames > 0:
-                        if self.vars["efficiency_mode"].get() == "on":
-                            control = self._pid_control_stable(error, bar_center)  # Prime timing/velocity state on re-entry.
-                        else:
-                            control = self._pid_control(error, bar_center)
+                        control = self._pid_control_strict(error, bar_center)  # Prime timing/velocity state on re-entry.
                         pid_reentry_frames -= 1
                     else:
-                        if self.vars["efficiency_mode"].get() == "on":
-                            control = self._pid_control_stable(error, bar_center)  # Prime timing/velocity state on re-entry.
-                        else:
-                            control = self._pid_control(error, bar_center)
+                        control = self._pid_control_strict(error, bar_center)
                     # Map PID output to mouse clicks using hysteresis to avoid jitter/oscillation
                     control = max((0 - pid_clamp), min(pid_clamp, control))
                     # Stabilize Deadzone Checker
