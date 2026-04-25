@@ -2559,58 +2559,8 @@ class App(CTk):
         elif right_bar_center is None:
             left_bar_center, right_bar_center = self._find_bar_edges(img, left_bar_hex, left_bar_hex, left_tol, left_tol)
         return fish_center, left_bar_center, right_bar_center
-    # Get values from GUI (repeated in cast, shake and minigame)
-    def _resolve_area(self, area_key, fallback):
-        area = self.bar_areas.get(area_key)
-
-        if isinstance(area, dict):
-            left = area["x"]
-            top = area["y"]
-            right = left + area["width"]
-            bottom = top + area["height"]
-        else:
-            left, top, right, bottom = fallback
-
-        width = right - left
-        height = bottom - top
-
-        return left, top, right, bottom, width, height
-    def _scale_rect(self, left, top, right, bottom, scale):
-        return (
-            int(left * scale),
-            int(top * scale),
-            int(right * scale),
-            int(bottom * scale),
-        )
-    def _load_minigame_config(self):
-        v = self.vars
-
-        return {
-            "arrow_hex": v["arrow_color"].get(),
-            "arrow_tol": int(v["arrow_tolerance"].get() or 8),
-
-            "left_ratio": float(v["left_ratio"].get() or 0.5),
-            "right_ratio": float(v["right_ratio"].get() or 0.5),
-
-            "pid_clamp": float(v["pid_clamp"].get() or 100),
-            "thresh": float(v["stabilize_threshold"].get() or 8),
-
-            "restart_method": v["restart_method"].get(),
-            "restart_delay": float(v["restart_delay"].get()),
-
-            "track_notes": v["track_notes"].get(),
-            "track_charges": v["track_charges"].get(),
-
-            "note_box_hex": v["note_box_color"].get(),
-            "note_box_tol": int(v["note_box_tolerance"].get() or 8),
-            "note_track_ratio": float(v["note_track_ratio"].get() or 0.1),
-
-            "charge_track_ratio": float(v["charge_track_ratio"].get() or 0.23),
-
-            "scan_delay": float(v["minigame_scan_delay"].get() or 0.05),
-        }
     # Controllers (PID and Maelstrom)
-    def _get_pid_gains(self):
+    def _get_pid_gains(self, inside_bar=False):
         """Get PID gains from config, with sensible defaults."""
         try:
             kp = float(self.vars["proportional_gain"].get() or 0.6)
@@ -3185,33 +3135,34 @@ class App(CTk):
         mouse_controller.press(Button.left)
         # Get scale factor
         scale = self._get_scale_factor()
-
-        # --- Area ---
-        shake_left, shake_top, shake_right, shake_bottom, _, shake_height = self._resolve_area(
-            "shake",
-            (
-                int(self.SCREEN_WIDTH * 0.1041),
-                int(self.SCREEN_HEIGHT * 0.0925),
-                int(self.SCREEN_WIDTH * 0.8958),
-                int(self.SCREEN_HEIGHT * 0.8333),
-            )
-        )
-
-        shake_left_s, shake_top_s, shake_right_s, shake_bottom_s = self._scale_rect(
-            shake_left, shake_top, shake_right, shake_bottom, scale)
-
-        # --- Config ---
-        cfg = self._load_minigame_config()
-
-        white_color = self.vars["perfect_color2"].get()
-        green_color = self.vars["perfect_color"].get()
-        white_tol = int(self.vars["perfect_cast2_tolerance"].get())
-        green_tol = int(self.vars["perfect_cast_tolerance"].get())
-
-        max_time = float(self.vars["perfect_max_time"].get())
-        perfect_thresh = int(self.vars["perfect_threshold"].get())
-        scan_delay = float(self.vars["cast_scan_delay"].get())
-        release_delay = float(self.vars["perfect_release_delay"].get())
+        # Shake area
+        shake = self.bar_areas.get("shake")
+        if isinstance(shake, dict):
+            shake_left   = shake["x"]
+            shake_top    = shake["y"]
+            shake_right  = shake["x"] + shake["width"]
+            shake_bottom = shake["y"] + shake["height"]
+            shake_height = shake["height"]
+        else:
+            # fallback (old ratio logic)
+            shake_left = int(self.SCREEN_WIDTH * 0.1041)
+            shake_top = int(self.SCREEN_HEIGHT * 0.0925)
+            shake_right = int(self.SCREEN_WIDTH * 0.8958)
+            shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
+            shake_height = shake_bottom - shake_top
+        shake_left_s   = int(shake_left * scale)
+        shake_top_s    = int(shake_top * scale)
+        shake_right_s  = int(shake_right * scale)
+        shake_bottom_s = int(shake_bottom * scale)
+        # SETTINGS 
+        white_color     = self.vars["perfect_color2"].get()
+        green_color     = self.vars["perfect_color"].get()
+        white_tol       = int(self.vars["perfect_cast2_tolerance"].get())
+        green_tol       = int(self.vars["perfect_cast_tolerance"].get())
+        max_time        = float(self.vars["perfect_max_time"].get())
+        perfect_thresh  = int(self.vars["perfect_threshold"].get())
+        scan_delay      = float(self.vars["cast_scan_delay"].get())
+        release_delay   = float(self.vars["perfect_release_delay"].get())
         if release_delay < 0:
             user_green_offset = abs(release_delay * 10)
             release_delay = 0
@@ -3294,50 +3245,60 @@ class App(CTk):
         """
         # Get scale factor
         scale = self._get_scale_factor()
+        # Shake area
+        shake = self.bar_areas.get("shake")
+        if isinstance(shake, dict):
+            shake_left   = shake["x"]
+            shake_top    = shake["y"]
+            shake_right  = shake["x"] + shake["width"]
+            shake_bottom = shake["y"] + shake["height"]
+            shake_x = int((shake_left + shake_right) / 2)
+            shake_y = int((shake_top + shake_bottom) / 2)
+        else:
+            # fallback (old ratio logic)
+            shake_left = int(self.SCREEN_WIDTH * 0.1041)
+            shake_top = int(self.SCREEN_HEIGHT * 0.0925)
+            shake_right = int(self.SCREEN_WIDTH * 0.8958)
+            shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
+        # Fish area
+        fish = self.bar_areas.get("fish")
+        if isinstance(fish, dict):
+            fish_left   = fish["x"]
+            fish_top    = fish["y"]
+            fish_right  = fish["x"] + fish["width"]
+            fish_bottom = fish["y"] + fish["height"]
+        else:
+            fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
+            fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
+            fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
+            fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
+        # Friend area
+        friend = self.bar_areas.get("friend")
+        if isinstance(friend, dict):
+            friend_left   = friend["x"]
+            friend_top    = friend["y"]
+            friend_right  = friend["x"] + friend["width"]
+            friend_bottom = friend["y"] + friend["height"]
+        else:
+            friend_left = int(self.SCREEN_WIDTH * 0.0046)
+            friend_top = int(self.SCREEN_HEIGHT * 0.8583)
+            friend_right = int(self.SCREEN_WIDTH * 0.0401)
+            friend_bottom = int(self.SCREEN_HEIGHT * 0.94)
+        # Scale to retina / 4K scaling
+        fish_left_s   = int(fish_left * scale)
+        fish_top_s    = int(fish_top * scale)
+        fish_right_s  = int(fish_right * scale)
+        fish_bottom_s = int(fish_bottom * scale)
 
-        # --- Areas ---
-        shake_left, shake_top, shake_right, shake_bottom, _, _ = self._resolve_area(
-            "shake",
-            (
-                int(self.SCREEN_WIDTH * 0.1041),
-                int(self.SCREEN_HEIGHT * 0.0925),
-                int(self.SCREEN_WIDTH * 0.8958),
-                int(self.SCREEN_HEIGHT * 0.8333),
-            )
-        )
+        shake_left_s   = int(shake_left * scale)
+        shake_top_s    = int(shake_top * scale)
+        shake_right_s  = int(shake_right * scale)
+        shake_bottom_s = int(shake_bottom * scale)
 
-        fish_left, fish_top, fish_right, fish_bottom, _, _ = self._resolve_area(
-            "fish",
-            (
-                int(self.SCREEN_WIDTH * 0.2844),
-                int(self.SCREEN_HEIGHT * 0.7981),
-                int(self.SCREEN_WIDTH * 0.7141),
-                int(self.SCREEN_HEIGHT * 0.8370),
-            )
-        )
-
-        friend_left, friend_top, friend_right, friend_bottom, _, _ = self._resolve_area(
-            "friend",
-            (
-                int(self.SCREEN_WIDTH * 0.0046),
-                int(self.SCREEN_HEIGHT * 0.8583),
-                int(self.SCREEN_WIDTH * 0.0401),
-                int(self.SCREEN_HEIGHT * 0.94),
-            )
-        )
-
-        # --- Scaling ---
-        shake_left_s, shake_top_s, shake_right_s, shake_bottom_s = self._scale_rect(
-            shake_left, shake_top, shake_right, shake_bottom, scale
-        )
-
-        fish_left_s, fish_top_s, fish_right_s, fish_bottom_s = self._scale_rect(
-            fish_left, fish_top, fish_right, fish_bottom, scale
-        )
-
-        friend_left_s, friend_top_s, friend_right_s, friend_bottom_s = self._scale_rect(
-            friend_left, friend_top, friend_right, friend_bottom, scale
-        )
+        friend_left_s   = int(friend_left * scale)
+        friend_right_s  = int(friend_right * scale)
+        friend_top_s    = int(friend_top * scale)
+        friend_bottom_s = int(friend_bottom * scale)
         # Misc variables
         detection_method = (self.vars["detection_method"].get())
         shake_area = self.bar_areas["shake"]
@@ -3420,34 +3381,40 @@ class App(CTk):
         self.set_status("Shake Mode: Navigation")
         # Get scale factor
         scale = self._get_scale_factor()
+        # Fish area
+        fish = self.bar_areas.get("fish")
+        if isinstance(fish, dict):
+            fish_left   = fish["x"]
+            fish_top    = fish["y"]
+            fish_right  = fish["x"] + fish["width"]
+            fish_bottom = fish["y"] + fish["height"]
+        else:
+            fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
+            fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
+            fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
+            fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
+        # Friend area
+        friend = self.bar_areas.get("friend")
+        if isinstance(friend, dict):
+            friend_left   = friend["x"]
+            friend_top    = friend["y"]
+            friend_right  = friend["x"] + friend["width"]
+            friend_bottom = friend["y"] + friend["height"]
+        else:
+            friend_left = int(self.SCREEN_WIDTH * 0.0046)
+            friend_top = int(self.SCREEN_HEIGHT * 0.8583)
+            friend_right = int(self.SCREEN_WIDTH * 0.0401)
+            friend_bottom = int(self.SCREEN_HEIGHT * 0.94)
+        # Scale to retina / 4K scaling
+        fish_left_s   = int(fish_left * scale)
+        fish_top_s    = int(fish_top * scale)
+        fish_right_s  = int(fish_right * scale)
+        fish_bottom_s = int(fish_bottom * scale)
 
-        fish_left, fish_top, fish_right, fish_bottom, _, _ = self._resolve_area(
-            "fish",
-            (
-                int(self.SCREEN_WIDTH * 0.2844),
-                int(self.SCREEN_HEIGHT * 0.7981),
-                int(self.SCREEN_WIDTH * 0.7141),
-                int(self.SCREEN_HEIGHT * 0.8370),
-            )
-        )
-
-        friend_left, friend_top, friend_right, friend_bottom, _, _ = self._resolve_area(
-            "friend",
-            (
-                int(self.SCREEN_WIDTH * 0.0046),
-                int(self.SCREEN_HEIGHT * 0.8583),
-                int(self.SCREEN_WIDTH * 0.0401),
-                int(self.SCREEN_HEIGHT * 0.94),
-            )
-        )
-
-        fish_left_s, fish_top_s, fish_right_s, fish_bottom_s = self._scale_rect(
-            fish_left, fish_top, fish_right, fish_bottom, scale
-        )
-
-        friend_left_s, friend_top_s, friend_right_s, friend_bottom_s = self._scale_rect(
-            friend_left, friend_top, friend_right, friend_bottom, scale
-        )
+        friend_left_s   = int(friend_left * scale)
+        friend_right_s  = int(friend_right * scale)
+        friend_top_s    = int(friend_top * scale)
+        friend_bottom_s = int(friend_bottom * scale)
 
         # Misc variables
         fish_hex = self.vars["fish_color"].get()
@@ -3518,69 +3485,63 @@ class App(CTk):
     def _enter_minigame(self):
         # Get scale factor
         scale = self._get_scale_factor()
+        # Shake area
+        shake = self.bar_areas.get("shake")
+        if isinstance(shake, dict):
+            shake_left   = shake["x"]
+            shake_top    = shake["y"]
+            shake_right  = shake["x"] + shake["width"]
+            shake_bottom = shake["y"] + shake["height"]
+        else:
+            # fallback (old ratio logic)
+            shake_left = int(self.SCREEN_WIDTH * 0.1041)
+            shake_top = int(self.SCREEN_HEIGHT * 0.0925)
+            shake_right = int(self.SCREEN_WIDTH * 0.8958)
+            shake_bottom = int(self.SCREEN_HEIGHT * 0.8333)
+        # Fish area
+        fish = self.bar_areas.get("fish")
+        if isinstance(fish, dict):
+            fish_left   = fish["x"]
+            fish_top    = fish["y"]
+            fish_right  = fish["x"] + fish["width"]
+            fish_bottom = fish["y"] + fish["height"]
+            fish_width = fish["width"]
+            fish_height = fish["height"]
+        else:
+            fish_left   = int(self.SCREEN_WIDTH  * 0.2844)
+            fish_top    = int(self.SCREEN_HEIGHT * 0.7981)
+            fish_right  = int(self.SCREEN_WIDTH  * 0.7141)
+            fish_bottom = int(self.SCREEN_HEIGHT * 0.8370)
+            fish_width = fish_right - fish_left
+            fish_height = fish_bottom - fish_top
+        # Friend area
+        friend = self.bar_areas.get("friend")
+        if isinstance(friend, dict):
+            friend_left   = friend["x"]
+            friend_top    = friend["y"]
+            friend_right  = friend["x"] + friend["width"]
+            friend_bottom = friend["y"] + friend["height"]
+        else:
+            friend_left = int(self.SCREEN_WIDTH * 0.0046)
+            friend_top = int(self.SCREEN_HEIGHT * 0.8583)
+            friend_right = int(self.SCREEN_WIDTH * 0.0401)
+            friend_bottom = int(self.SCREEN_HEIGHT * 0.94)
+        # Scale to retina / 4K scaling
+        fish_left_s   = int(fish_left * scale)
+        fish_top_s    = int(fish_top * scale)
+        fish_right_s  = int(fish_right * scale)
+        fish_bottom_s = int(fish_bottom * scale)
 
-        # --- Areas ---
-        shake_left, shake_top, shake_right, shake_bottom, _, _ = self._resolve_area(
-            "shake",
-            (
-                int(self.SCREEN_WIDTH * 0.1041),
-                int(self.SCREEN_HEIGHT * 0.0925),
-                int(self.SCREEN_WIDTH * 0.8958),
-                int(self.SCREEN_HEIGHT * 0.8333),
-            )
-        )
+        shake_left_s   = int(shake_left * scale)
+        shake_top_s    = int(shake_top * scale)
+        shake_right_s  = int(shake_right * scale)
+        shake_bottom_s = int(shake_bottom * scale)
 
-        fish_left, fish_top, fish_right, fish_bottom, fish_width, fish_height = self._resolve_area(
-            "fish",
-            (
-                int(self.SCREEN_WIDTH * 0.2844),
-                int(self.SCREEN_HEIGHT * 0.7981),
-                int(self.SCREEN_WIDTH * 0.7141),
-                int(self.SCREEN_HEIGHT * 0.8370),
-            )
-        )
+        friend_left_s   = int(friend_left * scale)
+        friend_right_s  = int(friend_right * scale)
+        friend_top_s    = int(friend_top * scale)
+        friend_bottom_s = int(friend_bottom * scale)
 
-        friend_left, friend_top, friend_right, friend_bottom, _, _ = self._resolve_area(
-            "friend",
-            (
-                int(self.SCREEN_WIDTH * 0.0046),
-                int(self.SCREEN_HEIGHT * 0.8583),
-                int(self.SCREEN_WIDTH * 0.0401),
-                int(self.SCREEN_HEIGHT * 0.94),
-            )
-        )
-
-        # --- Scaling ---
-        fish_left_s, fish_top_s, fish_right_s, fish_bottom_s = self._scale_rect(
-            fish_left, fish_top, fish_right, fish_bottom, scale
-        )
-
-        shake_left_s, shake_top_s, shake_right_s, shake_bottom_s = self._scale_rect(
-            shake_left, shake_top, shake_right, shake_bottom, scale
-        )
-
-        friend_left_s, friend_top_s, friend_right_s, friend_bottom_s = self._scale_rect(
-            friend_left, friend_top, friend_right, friend_bottom, scale
-        )
-
-        # --- Config ---
-        cfg = self._load_minigame_config()
-
-        arrow_hex = cfg["arrow_hex"]
-        arrow_tol = cfg["arrow_tol"]
-        left_ratio = cfg["left_ratio"]
-        right_ratio = cfg["right_ratio"]
-        pid_clamp = cfg["pid_clamp"]
-        thresh = cfg["thresh"]
-        restart_method = cfg["restart_method"]
-        restart_delay = cfg["restart_delay"]
-        track_notes = cfg["track_notes"]
-        track_charges = cfg["track_charges"]
-        note_box_hex = cfg["note_box_hex"]
-        note_box_tol = cfg["note_box_tol"]
-        note_track_ratio = cfg["note_track_ratio"]
-        charge_track_ratio = cfg["charge_track_ratio"]
-        scan_delay = cfg["scan_delay"]
         # Reset PID gains
         self._reset_pid_state()
         # Set default values
@@ -3596,6 +3557,22 @@ class App(CTk):
         charge_size2 = 0
         max_left = fish_left - 20
         max_right = fish_right + 20
+        # Load values from GUI
+        arrow_hex = self.vars["arrow_color"].get()
+        arrow_tol = int(self.vars["arrow_tolerance"].get() or 8)
+        left_ratio = float(self.vars["left_ratio"].get() or 0.5)
+        right_ratio = float(self.vars["right_ratio"].get() or 0.5)
+        pid_clamp = float(self.vars["pid_clamp"].get() or 100)
+        thresh = float(self.vars["stabilize_threshold"].get() or 8)
+        restart_method = (self.vars["restart_method"].get())
+        restart_delay = float(self.vars["restart_delay"].get())
+        track_notes = self.vars["track_notes"].get()
+        track_charges = self.vars["track_charges"].get()
+        note_box_hex = self.vars["note_box_color"].get()
+        note_box_tol = int(self.vars["note_box_tolerance"].get() or 8)
+        note_track_ratio = float(self.vars["note_track_ratio"].get() or 0.1)
+        charge_track_ratio = float(self.vars["charge_track_ratio"].get() or 0.23)
+        scan_delay = float(self.vars["minigame_scan_delay"].get() or 0.05)
         # Maelstrom-style charge control variables
         maelstrom_state = "minigame"  # State machine: "minigame" or "moving_to_right"
         colors_were_missing = False  # Track if colors were lost
